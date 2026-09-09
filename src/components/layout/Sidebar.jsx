@@ -104,9 +104,7 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
 
         {/* Navigation List */}
         <nav className="flex-1 px-3 pt-4 pb-2 space-y-1 overflow-y-auto">
-          <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            {isSupervisor ? 'Inventory & Pharmacy Management' : 'Customer Dispensing & Retrieval'}
-          </div>
+
 
           {navItems.map((item) => {
             const Icon = item.icon;
