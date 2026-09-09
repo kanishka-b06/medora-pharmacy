@@ -10,18 +10,20 @@ import {
   UserCheck, 
   ChevronDown,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Boxes
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
 import { ArchitectureDiagramModal } from '../common/ArchitectureDiagramModal';
 
 export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute }) {
-  const { currentUser, logout, resetDemoData, stats, settings } = usePharmacy();
+  const { currentUser, logout, switchUserRole, resetDemoData, stats, settings } = usePharmacy();
   const [showArchModal, setShowArchModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const isSupervisor = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  const isStockKeeper = currentUser?.role === 'stockkeeper';
 
   return (
     <>
@@ -38,7 +40,7 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
             </button>
 
             <div 
-              onClick={() => setCurrentRoute(isSupervisor ? 'admin-dashboard' : 'worker-search')}
+              onClick={() => setCurrentRoute(isSupervisor ? 'admin-dashboard' : isStockKeeper ? 'stock-dashboard' : 'worker-search')}
               className="flex items-center gap-2.5 cursor-pointer group"
             >
               <div className="w-9 h-9 rounded-full bg-[#11b3a1] flex items-center justify-center text-white shadow-md shadow-[#11b3a1]/25 group-hover:scale-105 transition-transform">
@@ -63,15 +65,57 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
           {/* Right: Quick Actions, Demo Tag, User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
 
+            {/* Quick Portal Switcher Pills */}
+            <div className="hidden md:flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/80 text-xs">
+              <button
+                type="button"
+                onClick={() => { switchUserRole('supervisor'); setCurrentRoute('admin-dashboard'); }}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all text-xs cursor-pointer ${
+                  isSupervisor ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Switch to Owner Portal"
+              >
+                Owner
+              </button>
+              <button
+                type="button"
+                onClick={() => { switchUserRole('staff'); setCurrentRoute('worker-search'); }}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all text-xs cursor-pointer ${
+                  !isSupervisor && !isStockKeeper ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Switch to Worker Portal"
+              >
+                Worker
+              </button>
+              <button
+                type="button"
+                onClick={() => { switchUserRole('stockkeeper'); setCurrentRoute('stock-dashboard'); }}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all text-xs cursor-pointer flex items-center gap-1 ${
+                  isStockKeeper ? 'bg-teal-600 text-white shadow-xs' : 'text-slate-600 hover:text-teal-700'
+                }`}
+                title="Switch to Stock Keeper Portal"
+              >
+                <Boxes className="w-3 h-3" />
+                <span>Stock Keeper</span>
+              </button>
+            </div>
 
             {/* Role Badge */}
             <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
               isSupervisor 
                 ? 'bg-teal-50 text-teal-800 border border-teal-200 shadow-sm' 
-                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm'
+                : isStockKeeper
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-sm ring-1 ring-teal-500/20'
+                : 'bg-slate-50 text-slate-700 border border-slate-200 shadow-sm'
             }`}>
-              {isSupervisor ? <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> : <UserCheck className="w-3.5 h-3.5 text-emerald-600" />}
-              <span>{isSupervisor ? 'Owner' : 'Worker'}</span>
+              {isSupervisor ? (
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+              ) : isStockKeeper ? (
+                <Boxes className="w-3.5 h-3.5 text-teal-700" />
+              ) : (
+                <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+              )}
+              <span>{isSupervisor ? 'Owner' : isStockKeeper ? 'Stock Keeper' : 'Worker'}</span>
             </div>
 
             {/* User Dropdown */}
@@ -81,7 +125,7 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
                 className="flex items-center gap-2 p-1 sm:p-1.5 rounded-xl hover:bg-teal-50/60 border border-transparent hover:border-teal-200 transition-all text-left"
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm ${
-                  isSupervisor ? 'bg-gradient-to-br from-teal-600 to-teal-700' : 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                  isSupervisor ? 'bg-gradient-to-br from-teal-600 to-teal-700' : isStockKeeper ? 'bg-gradient-to-br from-teal-700 to-emerald-700' : 'bg-gradient-to-br from-emerald-600 to-teal-600'
                 }`}>
                   {currentUser?.name?.charAt(0) || 'U'}
                 </div>
@@ -103,13 +147,68 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
                       <p className="text-xs font-bold text-slate-900">{currentUser?.name}</p>
                       <p className="text-xs text-slate-500">{currentUser?.email}</p>
                       <span className={`mt-1.5 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${
-                        isSupervisor ? 'bg-teal-100 text-teal-800' : 'bg-blue-100 text-blue-800'
+                        isSupervisor ? 'bg-teal-100 text-teal-800' : isStockKeeper ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {currentUser?.roleTitle || (isSupervisor ? 'Pharmacy Owner' : 'Staff Dispenser')}
+                        {currentUser?.roleTitle || (isSupervisor ? 'Pharmacy Owner' : isStockKeeper ? 'Stock Keeper & Batch Manager' : 'Staff Dispenser')}
                       </span>
                     </div>
 
+                    {/* Portal Switcher in dropdown */}
                     <div className="py-1">
+                      <p className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Switch Portal</p>
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          switchUserRole('stockkeeper');
+                          setCurrentRoute('stock-dashboard');
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                          isStockKeeper ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-teal-50/50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Boxes className="w-3.5 h-3.5 text-teal-600" />
+                          Stock Keeper Portal
+                        </span>
+                        {isStockKeeper && <span className="text-[10px] bg-teal-200/60 text-teal-800 px-1.5 py-0.5 rounded font-bold">Active</span>}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          switchUserRole('supervisor');
+                          setCurrentRoute('admin-dashboard');
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                          isSupervisor ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-teal-50/50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                          Owner Portal
+                        </span>
+                        {isSupervisor && <span className="text-[10px] bg-teal-200/60 text-teal-800 px-1.5 py-0.5 rounded font-bold">Active</span>}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          switchUserRole('staff');
+                          setCurrentRoute('worker-search');
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                          !isSupervisor && !isStockKeeper ? 'bg-teal-50 text-teal-800 font-bold' : 'text-slate-700 hover:bg-teal-50/50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+                          Worker Portal
+                        </span>
+                        {!isSupervisor && !isStockKeeper && <span className="text-[10px] bg-teal-200/60 text-teal-800 px-1.5 py-0.5 rounded font-bold">Active</span>}
+                      </button>
+                    </div>
+
+                    <div className="py-1 border-t border-slate-100">
                       <button
                         onClick={() => {
                           setShowUserDropdown(false);

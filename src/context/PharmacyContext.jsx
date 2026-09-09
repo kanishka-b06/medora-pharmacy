@@ -91,7 +91,14 @@ export function PharmacyProvider({ children }) {
   const [users, setUsers] = useState(() => {
     try {
       const saved = localStorage.getItem('medora_users');
-      const loaded = saved ? JSON.parse(saved) : INITIAL_USERS;
+      let loaded = saved ? JSON.parse(saved) : [...INITIAL_USERS];
+      // Ensure all INITIAL_USERS (especially usr-stockkeeper) exist
+      const existingUsernames = new Set(loaded.map((u) => u.username?.toLowerCase()));
+      INITIAL_USERS.forEach((initUser) => {
+        if (!existingUsernames.has(initUser.username?.toLowerCase())) {
+          loaded.push(initUser);
+        }
+      });
       return loaded.map((u) => {
         if (u.name === 'Sarah' || u.id === 'usr-supervisor' || u.username === 'supervisor') {
           return { ...u, role: 'owner', roleTitle: 'Pharmacy Owner' };
@@ -347,6 +354,27 @@ export function PharmacyProvider({ children }) {
       title: 'Signed Out',
       message: 'You have been safely signed out of MEDORA.'
     });
+  };
+
+  const switchUserRole = (targetRole) => {
+    let targetUser;
+    if (targetRole === 'stockkeeper') {
+      targetUser = users.find((u) => u.role === 'stockkeeper') || INITIAL_USERS.find((u) => u.role === 'stockkeeper');
+    } else if (targetRole === 'supervisor' || targetRole === 'owner' || targetRole === 'admin') {
+      targetUser = users.find((u) => u.role === 'supervisor' || u.role === 'owner') || INITIAL_USERS.find((u) => u.role === 'supervisor');
+    } else {
+      targetUser = users.find((u) => u.role === 'staff' || u.role === 'worker') || INITIAL_USERS.find((u) => u.role === 'staff');
+    }
+    if (targetUser) {
+      setCurrentUser(targetUser);
+      localStorage.setItem('medora_currentUser', JSON.stringify(targetUser));
+      addToast({
+        type: 'info',
+        title: 'Switched Role',
+        message: `Now viewing as ${targetUser.name} (${targetUser.roleTitle || targetRole})`
+      });
+      return targetUser;
+    }
   };
 
   // Medicine Inventory Management Actions
@@ -1256,6 +1284,7 @@ export function PharmacyProvider({ children }) {
     // Auth
     login,
     logout,
+    switchUserRole,
     // Medicine CRUD
     addMedicine,
     updateMedicine,
