@@ -8,16 +8,32 @@ export function RoleBasedLayout({ currentRoute, setCurrentRoute, children }) {
   const { currentUser } = usePharmacy();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Security guard: role-based access control
+  // Security guard: strict role-based access control
   const isSupervisorRoute = currentRoute.startsWith('admin-');
   const isStockKeeperRoute = currentRoute.startsWith('stock-');
-  const isStaff = currentUser?.role === 'staff' || currentUser?.role === 'worker';
+  const isWorkerRoute = currentRoute.startsWith('worker-');
+
+  const isOwner = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  const isWorker = currentUser?.role === 'staff' || currentUser?.role === 'worker';
   const isStockKeeper = currentUser?.role === 'stockkeeper';
-  // Staff can't access admin pages; stock keeper can't access admin/worker pages
+
+  // Strict isolation: each portal only accessible by its own registered user role
   const isUnauthorized =
-    (isSupervisorRoute && (isStaff || isStockKeeper)) ||
-    (isStockKeeperRoute && !isStockKeeper);
-  const unauthorizedRedirectRoute = isStockKeeper ? 'stock-dashboard' : 'worker-search';
+    (isSupervisorRoute && !isOwner) ||
+    (isStockKeeperRoute && !isStockKeeper) ||
+    (isWorkerRoute && !isWorker);
+
+  const unauthorizedRedirectRoute = isOwner
+    ? 'admin-dashboard'
+    : isStockKeeper
+    ? 'stock-dashboard'
+    : 'worker-search';
+
+  const returnLabel = isOwner
+    ? 'Return to Owner Dashboard'
+    : isStockKeeper
+    ? 'Return to Stock Keeper Dashboard'
+    : 'Return to Worker Portal';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e6faf8] via-[#f0fdf9] to-[#dcfce7]/40 flex flex-col font-sans text-slate-800 relative selection:bg-teal-100 selection:text-teal-900">
@@ -58,14 +74,16 @@ export function RoleBasedLayout({ currentRoute, setCurrentRoute, children }) {
               </div>
               <h2 className="text-xl font-extrabold text-slate-900 mb-2">Access Restricted</h2>
               <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                You do not have permission to access this section. This management page requires Owner privileges.
+                You do not have permission to access this section. This portal is restricted exclusively to authorized {
+                  isSupervisorRoute ? 'Owner' : isStockKeeperRoute ? 'Stock Keeper' : 'Worker'
+                } accounts.
               </p>
               <button
                 onClick={() => setCurrentRoute(unauthorizedRedirectRoute)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors shadow-sm cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Return to Medicine Search</span>
+                <span>{returnLabel}</span>
               </button>
             </div>
           ) : (
