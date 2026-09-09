@@ -15,13 +15,18 @@ import {
   UserCheck,
   X,
   Pill,
-  ShieldCheck
+  ShieldCheck,
+  PlusCircle,
+  ClipboardList,
+  MapPin,
+  Bell
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
 
 export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMobile }) {
-  const { currentUser, logout, stats } = usePharmacy();
+  const { currentUser, logout, stats, skStats } = usePharmacy();
   const isSupervisor = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  const isStockKeeper = currentUser?.role === 'stockkeeper';
 
   const supervisorNavItems = [
     { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -68,7 +73,27 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
     { id: 'worker-activity', label: 'My Activity', icon: History }
   ];
 
-  const navItems = isSupervisor ? supervisorNavItems : staffNavItems;
+  const stockKeeperNavItems = [
+    { id: 'stock-dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'stock-new-batch', label: 'Add New Batch', icon: PlusCircle },
+    {
+      id: 'stock-arrangement',
+      label: 'Batch Arrangement',
+      icon: ClipboardList,
+      badge: skStats?.unarrangedBatchesCount > 0 ? `${skStats.unarrangedBatchesCount} pending` : null,
+      badgeColor: 'bg-amber-100 text-amber-800'
+    },
+    { id: 'stock-locations', label: 'Location Map', icon: MapPin },
+    {
+      id: 'stock-notifications',
+      label: 'Notifications',
+      icon: Bell,
+      badge: skStats?.unreadSKNotifs > 0 ? `${skStats.unreadSKNotifs}` : null,
+      badgeColor: 'bg-rose-100 text-rose-800'
+    },
+  ];
+
+  const navItems = isSupervisor ? supervisorNavItems : isStockKeeper ? stockKeeperNavItems : staffNavItems;
 
   const handleNavClick = (id) => {
     setCurrentRoute(id);

@@ -23,6 +23,17 @@ export const INITIAL_USERS = [
     lastActive: '5 mins ago',
     avatarColor: 'bg-blue-600',
     roleTitle: 'Pharmacy Staff Dispenser'
+  },
+  {
+    id: 'usr-stockkeeper',
+    username: 'stockkeeper',
+    name: 'Kavitha',
+    role: 'stockkeeper',
+    email: 'stockkeeper@medora.local',
+    status: 'active',
+    lastActive: 'Just now',
+    avatarColor: 'bg-teal-700',
+    roleTitle: 'Stock Keeper & Batch Manager'
   }
 ];
 
@@ -552,3 +563,163 @@ export const INITIAL_SETTINGS = {
   enableSoundAlerts: false,
   currencySymbol: '₹'
 };
+
+export const INITIAL_BATCHES = [
+  {
+    id: 'batch-001',
+    medicineId: 'med-001',
+    medicineName: 'Paracetamol 500 mg',
+    activeIngredient: 'Paracetamol',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'B102',
+    expiryDate: '2027-08-15',
+    quantity: 0, // Previous batch depleted to 0
+    rack: 'B',
+    shelf: '3',
+    status: 'Arranged', // 'Arranged' | 'Unarranged'
+    arrangedAt: '2026-08-20T10:00:00+05:30',
+    notes: 'Initial operational stock'
+  },
+  {
+    id: 'batch-002',
+    medicineId: 'med-001',
+    medicineName: 'Paracetamol 500 mg',
+    activeIngredient: 'Paracetamol',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'B103',
+    expiryDate: '2028-02-15',
+    quantity: 100, // Ready for arrangement! (Triggers Stock-Zero workflow when B102 is 0)
+    rack: '',
+    shelf: '',
+    status: 'Unarranged',
+    arrangedAt: null,
+    notes: 'Received from Apex Pharma Distributors. Awaiting physical shelving.'
+  },
+  {
+    id: 'batch-003',
+    medicineId: 'med-002',
+    medicineName: 'Calpol 500 mg',
+    activeIngredient: 'Paracetamol',
+    strength: '500 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'CP504',
+    expiryDate: '2027-11-20',
+    quantity: 35,
+    rack: 'C',
+    shelf: '2',
+    status: 'Arranged',
+    arrangedAt: '2026-08-15T11:00:00+05:30',
+    notes: 'Arranged in Antibiotics/Analgesics row'
+  },
+  {
+    id: 'batch-004',
+    medicineId: 'med-003',
+    medicineName: 'Dolo 650 mg',
+    activeIngredient: 'Paracetamol',
+    strength: '650 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'DL901',
+    expiryDate: '2028-01-10',
+    quantity: 85,
+    rack: 'B',
+    shelf: '4',
+    status: 'Arranged',
+    arrangedAt: '2026-08-10T14:30:00+05:30',
+    notes: 'Fast-moving counter stock'
+  },
+  {
+    id: 'batch-005',
+    medicineId: 'med-003',
+    medicineName: 'Dolo 650 mg',
+    activeIngredient: 'Paracetamol',
+    strength: '650 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'DL905',
+    expiryDate: '2028-06-20',
+    quantity: 80,
+    rack: '',
+    shelf: '',
+    status: 'Unarranged',
+    arrangedAt: null,
+    notes: 'Secondary batch received from Micro Labs'
+  },
+  {
+    id: 'batch-006',
+    medicineId: 'med-004',
+    medicineName: 'Cetirizine 10 mg',
+    activeIngredient: 'Cetirizine Hydrochloride',
+    strength: '10 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'CT883',
+    expiryDate: '2027-05-30',
+    quantity: 6,
+    rack: 'A',
+    shelf: '2',
+    status: 'Arranged',
+    arrangedAt: '2026-07-15T09:30:00+05:30',
+    notes: 'Low stock'
+  },
+  {
+    id: 'batch-007',
+    medicineId: 'med-011',
+    medicineName: 'Amoxicillin 500 mg',
+    activeIngredient: 'Amoxicillin Trihydrate',
+    strength: '500 mg',
+    dosageForm: 'Capsule',
+    batchNumber: 'AM553',
+    expiryDate: '2027-09-10',
+    quantity: 50,
+    rack: '',
+    shelf: '',
+    status: 'Unarranged',
+    arrangedAt: null,
+    notes: 'Backup batch for out-of-stock Amoxicillin'
+  },
+  {
+    id: 'batch-008',
+    medicineId: 'med-007',
+    medicineName: 'Pantoprazole 40 mg',
+    activeIngredient: 'Pantoprazole Sodium',
+    strength: '40 mg',
+    dosageForm: 'Tablet',
+    batchNumber: 'PN441',
+    expiryDate: '2027-12-05',
+    quantity: 65,
+    rack: 'D',
+    shelf: '2',
+    status: 'Arranged',
+    arrangedAt: '2026-08-01T15:00:00+05:30',
+    notes: 'Gastrointestinal aisle'
+  }
+];
+
+export const INITIAL_NOTIFICATIONS = [
+  {
+    id: 'notif-001',
+    recipientRole: 'stockkeeper',
+    title: 'New Batch Available for Arrangement',
+    message: 'Paracetamol 500 mg (Batch B103, 100 units) has arrived and is waiting for physical shelf placement.',
+    medicineId: 'med-001',
+    medicineName: 'Paracetamol 500 mg',
+    batchNumber: 'B103',
+    quantity: 100,
+    timestamp: '2026-09-04T12:00:00+05:30',
+    read: false,
+    actionRoute: 'stock-arrange'
+  },
+  {
+    id: 'notif-002',
+    recipientRole: 'owner',
+    title: 'Restock Required',
+    message: 'Omeprazole 20 mg has reached critical low stock (3 units remaining, batch expiring soon) and NO backup batch is in the pharmacy.',
+    medicineId: 'med-006',
+    medicineName: 'Omeprazole 20 mg',
+    batchNumber: 'OM209',
+    quantity: 3,
+    timestamp: '2026-09-04T09:15:00+05:30',
+    read: false,
+    actionRoute: 'admin-orders'
+  }
+];
