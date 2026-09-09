@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   UserCheck,
   CheckCircle2,
-  Sparkles,
   Boxes,
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
@@ -173,13 +172,10 @@ export function LoginPage({ onLoginSuccess }) {
             </div>
 
             {/* ── Heading ── */}
-            <div className="mb-7">
+            <div className="mb-6">
               <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
                 Welcome Back!
               </h1>
-              <p className="mt-1.5 text-sm text-slate-500 font-medium">
-                Sign in to access your pharmacy dashboard
-              </p>
             </div>
 
             {/* ── Error alert ── */}
@@ -277,10 +273,6 @@ export function LoginPage({ onLoginSuccess }) {
                     Remember me
                   </span>
                 </label>
-                <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-teal-500" />
-                  Role auto-detected
-                </span>
               </div>
 
               {/* ── Login button ── */}
@@ -322,9 +314,6 @@ export function LoginPage({ onLoginSuccess }) {
 
             {/* ── Quick-fill buttons ── */}
             <div className="mt-6 pt-4 border-t border-slate-100">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center mb-2.5">
-                Quick Access Portals (1-Click Demo)
-              </p>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
@@ -360,15 +349,12 @@ export function LoginPage({ onLoginSuccess }) {
                     bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 hover:border-emerald-400
                     text-emerald-950 text-xs font-bold transition-all duration-200
                     hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 cursor-pointer ring-2 ring-teal-500/30"
-                  title="Enter Stock Keeper Portal (New)"
+                  title="Enter Stock Keeper Portal"
                 >
                   <Boxes className="w-4 h-4 text-teal-700" />
                   <span className="text-[11px] leading-tight font-bold">Stock Keeper</span>
                 </button>
               </div>
-              <p className="mt-2.5 text-center text-[10px] text-slate-400 font-medium">
-                Stock Keeper Login: <span className="font-mono text-teal-700 font-bold">stockkeeper</span> / <span className="font-mono text-teal-700 font-bold">stock123</span>
-              </p>
             </div>
 
           </div>{/* /animate-form-in */}
