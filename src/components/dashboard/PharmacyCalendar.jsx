@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { usePharmacy } from '../../context/PharmacyContext';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Circle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2, Circle, RotateCcw } from 'lucide-react';
 
 export function PharmacyCalendar() {
   const { stats } = usePharmacy();
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 8, 4)); // Sept 2026 based on mock timeline or current
-  const [selectedDay, setSelectedDay] = useState(4);
+  const today = new Date();
+
+  // Initialize with real current date
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const [tasks, setTasks] = useState([
     { id: 1, text: 'Morning Inventory Stock Check', time: '09:00 - 10:00 AM', done: true },
@@ -25,12 +28,32 @@ export function PharmacyCalendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
+  const isCurrentMonthView = month === today.getMonth() && year === today.getFullYear();
+  const isTodaySelected = isCurrentMonthView && selectedDay === today.getDate();
+
   const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+    const prev = new Date(year, month - 1, 1);
+    setCurrentDate(prev);
+    if (prev.getMonth() === today.getMonth() && prev.getFullYear() === today.getFullYear()) {
+      setSelectedDay(today.getDate());
+    } else {
+      setSelectedDay(1);
+    }
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
+    const next = new Date(year, month + 1, 1);
+    setCurrentDate(next);
+    if (next.getMonth() === today.getMonth() && next.getFullYear() === today.getFullYear()) {
+      setSelectedDay(today.getDate());
+    } else {
+      setSelectedDay(1);
+    }
+  };
+
+  const handleGoToToday = () => {
+    setCurrentDate(new Date());
+    setSelectedDay(today.getDate());
   };
 
   // Calendar calculations
@@ -45,32 +68,39 @@ export function PharmacyCalendar() {
     days.push({
       day: prevMonthTotalDays - i,
       isCurrentMonth: false,
-      dateKey: `${year}-${month}-${prevMonthTotalDays - i}`
+      dateKey: `prev-${year}-${month}-${prevMonthTotalDays - i}`
     });
   }
 
   // Current month days
   for (let d = 1; d <= totalDaysInMonth; d++) {
+    const isToday = isCurrentMonthView && d === today.getDate();
     days.push({
       day: d,
       isCurrentMonth: true,
-      isToday: d === 4 && month === 8 && year === 2026, // Sept 4, 2026
+      isToday,
       hasEvent: d === 8 || d === 10 || d === 15, // dates with restocks/deliveries
-      dateKey: `${year}-${month + 1}-${d}`
+      dateKey: `curr-${year}-${month + 1}-${d}`
     });
   }
 
   // Trailing next month days to complete 35 or 42 grid
-  const remaining = 35 - days.length;
+  const remaining = 35 - days.length > 0 ? 35 - days.length : (42 - days.length > 0 ? 42 - days.length : 0);
   if (remaining > 0) {
     for (let d = 1; d <= remaining; d++) {
       days.push({
         day: d,
         isCurrentMonth: false,
-        dateKey: `${year}-${month + 2}-${d}`
+        dateKey: `next-${year}-${month + 2}-${d}`
       });
     }
   }
+
+  const formattedSelectedDate = new Date(year, month, selectedDay).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 
   return (
     <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-5 sm:p-6 border border-teal-100/80 shadow-[0_4px_20px_-4px_rgba(13,148,136,0.06)] flex flex-col justify-between h-full">
@@ -90,6 +120,15 @@ export function PharmacyCalendar() {
           </div>
 
           <div className="flex items-center gap-1 bg-teal-50/70 border border-teal-200/60 p-1 rounded-xl">
+            {!isCurrentMonthView && (
+              <button
+                onClick={handleGoToToday}
+                className="px-2 py-0.5 text-[10px] font-bold rounded-lg text-teal-700 hover:bg-white transition-colors"
+                title="Jump to Today"
+              >
+                Today
+              </button>
+            )}
             <button
               onClick={handlePrevMonth}
               className="p-1 rounded-lg text-slate-600 hover:text-teal-800 hover:bg-white transition-colors"
@@ -129,17 +168,21 @@ export function PharmacyCalendar() {
                 key={idx}
                 onClick={() => item.isCurrentMonth && setSelectedDay(item.day)}
                 disabled={!item.isCurrentMonth}
-                className={`h-8 w-8 mx-auto flex flex-col items-center justify-center rounded-full transition-all relative ${!item.isCurrentMonth
-                  ? 'text-slate-300 cursor-default'
-                  : isSelected
-                    ? 'bg-[#11b3a1] text-white font-extrabold shadow-md shadow-[#11b3a1]/25 scale-105'
-                    : isToday
-                      ? 'bg-amber-100 text-amber-900 font-extrabold border border-amber-300'
-                      : 'text-slate-700 hover:bg-teal-50/80 hover:text-teal-900'
-                  }`}
+                className={`h-8 w-8 mx-auto flex flex-col items-center justify-center rounded-full transition-all relative ${
+                  !item.isCurrentMonth
+                    ? 'text-slate-300 cursor-default'
+                    : isSelected
+                      ? 'bg-[#11b3a1] text-white font-extrabold shadow-md shadow-[#11b3a1]/25 scale-105'
+                      : isToday
+                        ? 'bg-teal-50 text-teal-900 font-extrabold border-2 border-[#11b3a1]'
+                        : 'text-slate-700 hover:bg-teal-50/80 hover:text-teal-900'
+                }`}
               >
                 <span>{item.day}</span>
-                {item.hasEvent && !isSelected && (
+                {isToday && !isSelected && (
+                  <span className="absolute -top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-[#11b3a1]" />
+                )}
+                {item.hasEvent && !isSelected && !isToday && (
                   <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[#11b3a1]" />
                 )}
               </button>
@@ -148,16 +191,18 @@ export function PharmacyCalendar() {
         </div>
       </div>
 
-      {/* Today's Pharmacy Task Checklist (from Reference 2) */}
+      {/* Today's Pharmacy Task Checklist */}
       <div className="pt-4 mt-3 border-t border-teal-100/60 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-extrabold text-slate-900">Today's Schedule</span>
+            <span className="text-xs font-extrabold text-slate-900">
+              {isTodaySelected ? "Today's Schedule" : "Selected Day Schedule"}
+            </span>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200/60">
               {tasks.filter(t => t.done).length}/{tasks.length} Done
             </span>
           </div>
-          <span className="text-[10px] text-teal-700 font-semibold">Sept {selectedDay}, {year}</span>
+          <span className="text-[10px] text-teal-700 font-semibold">{formattedSelectedDate}</span>
         </div>
 
         <div className="space-y-1.5">
@@ -165,10 +210,11 @@ export function PharmacyCalendar() {
             <div
               key={task.id}
               onClick={() => toggleTask(task.id)}
-              className={`p-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-colors ${task.done
-                ? 'bg-teal-50/50 border-teal-200/60 text-slate-500'
-                : 'bg-white border-slate-200/80 hover:border-teal-300 text-slate-800'
-                }`}
+              className={`p-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                task.done
+                  ? 'bg-teal-50/50 border-teal-200/60 text-slate-500'
+                  : 'bg-white border-slate-200/80 hover:border-teal-300 text-slate-800'
+              }`}
             >
               <div className="flex items-center gap-2">
                 {task.done ? (
