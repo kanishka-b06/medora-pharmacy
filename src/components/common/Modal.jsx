@@ -1,7 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = 'max-w-2xl' }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -16,24 +23,24 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
-      {/* Modal Card */}
+      {/* Modal Card - strictly centered vertically & horizontally on viewport */}
       <div
-        className={`relative w-full ${maxWidth} bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden z-10 my-8 transition-all transform max-h-[90vh] flex flex-col`}
+        className={`relative w-full ${maxWidth} max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden z-10 flex flex-col animate-fade-in`}
         role="dialog"
         aria-modal="true"
       >
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        {/* Header - Fixed at top */}
+        <div className="flex items-start justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70 shrink-0">
           <div>
             <h3 className="text-lg font-bold text-slate-900">{title}</h3>
             {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
@@ -47,9 +54,10 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="px-6 py-5 overflow-y-auto flex-1">{children}</div>
+        {/* Content Body - Scrolls cleanly when form content overflows */}
+        <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0 overscroll-contain">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

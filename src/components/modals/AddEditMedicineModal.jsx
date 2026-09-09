@@ -358,8 +358,8 @@ export function AddEditMedicineModal({ isOpen, onClose, medicineToEdit = null })
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+        {/* Buttons - Sticky at the bottom of the scroll area */}
+        <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm -mx-6 px-6 -mb-5 py-3.5 border-t border-slate-200/80 flex items-center justify-end gap-3 z-10 mt-6 shadow-sm">
           <button
             type="button"
             onClick={onClose}
