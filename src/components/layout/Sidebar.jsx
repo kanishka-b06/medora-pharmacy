@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -18,60 +18,10 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
-import sidebarIllustration from '../../assets/pharmacy-sidebar-illustration.png';
 
 export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMobile }) {
   const { currentUser, logout, stats } = usePharmacy();
   const isSupervisor = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
-
-  // Movable Illustration Drag State
-  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
-
-  const handlePointerDown = (e) => {
-    if (e.button !== undefined && e.button !== 0) return;
-    setIsDragging(true);
-    const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-    const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-    dragStartRef.current = {
-      mouseX: clientX,
-      mouseY: clientY,
-      posX: dragPos.x,
-      posY: dragPos.y
-    };
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handlePointerMove = (e) => {
-      const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-      const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-      const dx = clientX - dragStartRef.current.mouseX;
-      const dy = clientY - dragStartRef.current.mouseY;
-      setDragPos({
-        x: dragStartRef.current.posX + dx,
-        y: dragStartRef.current.posY + dy
-      });
-    };
-
-    const handlePointerUp = () => {
-      setIsDragging(false);
-    };
-
-    window.addEventListener('mousemove', handlePointerMove);
-    window.addEventListener('mouseup', handlePointerUp);
-    window.addEventListener('touchmove', handlePointerMove);
-    window.addEventListener('touchend', handlePointerUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('mouseup', handlePointerUp);
-      window.removeEventListener('touchmove', handlePointerMove);
-      window.removeEventListener('touchend', handlePointerUp);
-    };
-  }, [isDragging]);
 
   const supervisorNavItems = [
     { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -193,39 +143,6 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
           })}
         </nav>
 
-        {/* Pharmacy Illustration (Only Moves When Touched / Dragged) */}
-        <div className="px-4 py-2 flex flex-col items-center justify-center select-none relative">
-          <div
-            onMouseDown={handlePointerDown}
-            onTouchStart={handlePointerDown}
-            onDoubleClick={() => setDragPos({ x: 0, y: 0 })}
-            style={{
-              transform: `translate3d(${dragPos.x}px, ${dragPos.y}px, 0)`,
-              touchAction: 'none'
-            }}
-            className={`relative z-20 cursor-grab active:cursor-grabbing transition-all duration-150 ${
-              isDragging
-                ? 'scale-110 opacity-95 drop-shadow-2xl'
-                : 'hover:-translate-y-2 hover:scale-105 active:scale-110'
-            }`}
-            title="Touch or drag me to move! Double-click to reset."
-          >
-            <img
-              src={sidebarIllustration}
-              alt="Pharmacy Operations"
-              className="w-36 h-auto max-h-36 object-contain pointer-events-none drop-shadow-sm transition-transform duration-200"
-              draggable={false}
-            />
-          </div>
-          {(dragPos.x !== 0 || dragPos.y !== 0) && (
-            <button
-              onClick={() => setDragPos({ x: 0, y: 0 })}
-              className="mt-1 text-[10px] text-teal-600 hover:text-teal-800 font-bold tracking-tight bg-teal-50/80 px-2 py-0.5 rounded-md border border-teal-200/60"
-            >
-              Reset Position ↺
-            </button>
-          )}
-        </div>
 
         {/* Footer Logout */}
         <div className="p-3 border-t border-teal-100/80">
