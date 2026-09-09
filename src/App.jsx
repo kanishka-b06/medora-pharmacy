@@ -107,7 +107,7 @@ export function App() {
         return <WorkerActivity />;
 
       default:
-        return (currentUser.role === 'supervisor' || currentUser.role === 'admin') ? (
+        return (currentUser.role === 'supervisor' || currentUser.role === 'admin' || currentUser.role === 'owner') ? (
           <AdminDashboard setCurrentRoute={setCurrentRoute} />
         ) : (
           <WorkerSearch

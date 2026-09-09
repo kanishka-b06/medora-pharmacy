@@ -5,6 +5,7 @@ import {
   UserCheck,
   UserPlus,
   Shield,
+  ShieldCheck,
   User,
   Key,
   CheckCircle,
@@ -76,7 +77,8 @@ export function UserManagement() {
 
             <tbody className="divide-y divide-slate-100 text-xs">
               {users.map((u) => {
-                const isAdmin = u.role === 'supervisor' || u.role === 'admin';
+                const isOwner = u.role === 'owner' || u.name === 'Sarah' || u.id === 'usr-supervisor' || u.username === 'supervisor';
+                const isAdmin = isOwner || u.role === 'supervisor' || u.role === 'admin';
                 const isActive = u.status === 'active';
 
                 return (
@@ -99,15 +101,25 @@ export function UserManagement() {
 
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[11px] ${
-                        isAdmin ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'bg-blue-50 text-blue-800 border border-blue-200'
+                        isOwner
+                          ? 'bg-teal-50 text-teal-900 border border-teal-300'
+                          : isAdmin
+                            ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                            : 'bg-blue-50 text-blue-800 border border-blue-200'
                       }`}>
-                        {isAdmin ? <Shield className="w-3 h-3 text-teal-600" /> : <User className="w-3 h-3 text-blue-600" />}
-                        <span>{isAdmin ? 'Admin / Manager' : 'Worker'}</span>
+                        {isOwner ? (
+                          <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                        ) : isAdmin ? (
+                          <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                        ) : (
+                          <User className="w-3.5 h-3.5 text-blue-600" />
+                        )}
+                        <span>{isOwner ? 'Owner' : isAdmin ? 'Admin / Manager' : 'Worker'}</span>
                       </span>
                     </td>
 
-                    <td className="px-4 py-3.5 text-slate-600">
-                      {u.roleTitle || 'Pharmacy Staff'}
+                    <td className="px-4 py-3.5 text-slate-600 font-medium">
+                      {isOwner ? 'Pharmacy Owner' : (u.roleTitle || 'Pharmacy Staff')}
                     </td>
 
                     <td className="px-4 py-3.5">
@@ -209,6 +221,7 @@ export function UserManagement() {
               >
                 <option value="worker">Worker / Dispenser</option>
                 <option value="admin">Admin / Manager</option>
+                <option value="owner">Owner</option>
               </select>
             </div>
 

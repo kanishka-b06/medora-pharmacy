@@ -22,8 +22,10 @@ export function PharmacyProvider({ children }) {
         // Normalize role names
         if (u.role === 'admin') u.role = 'supervisor';
         if (u.role === 'worker') u.role = 'staff';
-        if (u.name === 'Dr. Sarah Jenkins' || !u.name) {
+        if (u.name === 'Dr. Sarah Jenkins' || !u.name || u.name === 'Sarah' || u.username === 'supervisor' || u.id === 'usr-supervisor') {
           u.name = 'Sarah';
+          u.role = 'owner';
+          u.roleTitle = 'Pharmacy Owner';
           localStorage.setItem('medora_currentUser', JSON.stringify(u));
         }
         if (u.name === 'Alex Rivera') {
@@ -87,7 +89,13 @@ export function PharmacyProvider({ children }) {
   const [users, setUsers] = useState(() => {
     try {
       const saved = localStorage.getItem('medora_users');
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
+      const loaded = saved ? JSON.parse(saved) : INITIAL_USERS;
+      return loaded.map((u) => {
+        if (u.name === 'Sarah' || u.id === 'usr-supervisor' || u.username === 'supervisor') {
+          return { ...u, role: 'owner', roleTitle: 'Pharmacy Owner' };
+        }
+        return u;
+      });
     } catch {
       return INITIAL_USERS;
     }

@@ -6,7 +6,7 @@ export const INITIAL_USERS = [
     id: 'usr-supervisor',
     username: 'supervisor',
     name: 'Sarah',
-    role: 'supervisor',
+    role: 'owner',
     email: 'kanishka.b6906@gmail.com',
     status: 'active',
     lastActive: 'Just now',
