@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   UserCheck,
   CheckCircle2,
-  Boxes,
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
 import pharmacyIllustration from '../../assets/pharmacy-illustration.jpg';
@@ -69,14 +68,8 @@ export function LoginPage({ onLoginSuccess }) {
 
   /* ─── Quick-fill helpers & direct portal entry ─── */
   const enterAsRole = (roleType) => {
-    let u = 'supervisor', p = 'supervisor123';
-    if (roleType === 'stockkeeper') {
-      u = 'stockkeeper';
-      p = 'stock123';
-    } else if (roleType === 'worker') {
-      u = 'staff';
-      p = 'staff123';
-    }
+    const u = roleType === 'owner' ? 'supervisor' : 'staff';
+    const p = roleType === 'owner' ? 'supervisor123' : 'staff123';
     setUsername(u);
     setPassword(p);
     setErrorMessage('');
@@ -314,45 +307,32 @@ export function LoginPage({ onLoginSuccess }) {
 
             {/* ── Quick-fill buttons ── */}
             <div className="mt-6 pt-4 border-t border-slate-100">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   id="quick-owner-portal"
                   onClick={() => enterAsRole('owner')}
-                  className="flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-xl
-                    bg-teal-50/80 hover:bg-teal-100 border border-teal-200/80 hover:border-teal-300
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
+                    bg-teal-50/90 hover:bg-teal-100 border border-teal-200/80 hover:border-teal-300
                     text-teal-900 text-xs font-bold transition-all duration-200
                     hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-                  title="Enter Owner Portal"
+                  title="Enter Owner / Admin Portal"
                 >
                   <ShieldCheck className="w-4 h-4 text-teal-600" />
-                  <span className="text-[11px] leading-tight font-bold">Owner</span>
+                  <span className="text-xs font-bold">Owner Portal</span>
                 </button>
                 <button
                   type="button"
                   id="quick-worker-portal"
                   onClick={() => enterAsRole('worker')}
-                  className="flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-xl
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
                     bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300
                     text-slate-700 text-xs font-bold transition-all duration-200
                     hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                   title="Enter Worker Portal"
                 >
                   <UserCheck className="w-4 h-4 text-slate-600" />
-                  <span className="text-[11px] leading-tight font-bold">Worker</span>
-                </button>
-                <button
-                  type="button"
-                  id="quick-stockkeeper-portal"
-                  onClick={() => enterAsRole('stockkeeper')}
-                  className="flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-xl
-                    bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 hover:border-emerald-400
-                    text-emerald-950 text-xs font-bold transition-all duration-200
-                    hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 cursor-pointer ring-2 ring-teal-500/30"
-                  title="Enter Stock Keeper Portal"
-                >
-                  <Boxes className="w-4 h-4 text-teal-700" />
-                  <span className="text-[11px] leading-tight font-bold">Stock Keeper</span>
+                  <span className="text-xs font-bold">Worker Portal</span>
                 </button>
               </div>
             </div>

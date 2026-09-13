@@ -10,29 +10,22 @@ export function RoleBasedLayout({ currentRoute, setCurrentRoute, children }) {
 
   // Security guard: strict role-based access control
   const isSupervisorRoute = currentRoute.startsWith('admin-');
-  const isStockKeeperRoute = currentRoute.startsWith('stock-');
   const isWorkerRoute = currentRoute.startsWith('worker-');
 
   const isOwner = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
   const isWorker = currentUser?.role === 'staff' || currentUser?.role === 'worker';
-  const isStockKeeper = currentUser?.role === 'stockkeeper';
 
   // Strict isolation: each portal only accessible by its own registered user role
   const isUnauthorized =
     (isSupervisorRoute && !isOwner) ||
-    (isStockKeeperRoute && !isStockKeeper) ||
     (isWorkerRoute && !isWorker);
 
   const unauthorizedRedirectRoute = isOwner
     ? 'admin-dashboard'
-    : isStockKeeper
-    ? 'stock-dashboard'
     : 'worker-search';
 
   const returnLabel = isOwner
     ? 'Return to Owner Dashboard'
-    : isStockKeeper
-    ? 'Return to Stock Keeper Dashboard'
     : 'Return to Worker Portal';
 
   return (
@@ -75,7 +68,7 @@ export function RoleBasedLayout({ currentRoute, setCurrentRoute, children }) {
               <h2 className="text-xl font-extrabold text-slate-900 mb-2">Access Restricted</h2>
               <p className="text-sm text-slate-600 mb-6 leading-relaxed">
                 You do not have permission to access this section. This portal is restricted exclusively to authorized {
-                  isSupervisorRoute ? 'Owner' : isStockKeeperRoute ? 'Stock Keeper' : 'Worker'
+                  isSupervisorRoute ? 'Owner' : 'Worker'
                 } accounts.
               </p>
               <button

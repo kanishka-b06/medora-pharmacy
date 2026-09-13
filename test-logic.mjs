@@ -31,8 +31,8 @@ console.assert(topMatch.candidate.quantity > 0, 'Candidate must be in stock');
 console.log('✓ AI Alternative Matching engine passed!');
 
 // 3. Test Expiry Risk
-const exp1 = calculateExpiryRisk('2026-09-10', 90, 30);
-console.log('Expiry risk for 2026-09-10:', exp1);
+const exp1 = calculateExpiryRisk('2026-09-25', 90, 30);
+console.log('Expiry risk for 2026-09-25:', exp1);
 console.assert(exp1.status === 'high_risk' || exp1.status === 'expiring_soon', 'Imminent date should be high risk or expiring soon');
 
 console.log('✓ All core logic tests passed with 100% assertions satisfied!');

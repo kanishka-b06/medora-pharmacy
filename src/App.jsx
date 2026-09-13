@@ -22,13 +22,6 @@ import { WorkerAlternativeFinder } from './pages/worker/WorkerAlternativeFinder'
 import { WorkerActivity } from './pages/worker/WorkerActivity';
 import { MedicineInfoPage } from './pages/worker/MedicineInfoPage';
 
-// Stock Keeper Pages
-import { StockKeeperDashboard } from './pages/stockkeeper/StockKeeperDashboard';
-import { NewBatchPage } from './pages/stockkeeper/NewBatchPage';
-import { MedicineArrangementPage } from './pages/stockkeeper/MedicineArrangementPage';
-import { LocationManagementPage } from './pages/stockkeeper/LocationManagementPage';
-import { StockNotificationsPage } from './pages/stockkeeper/StockNotificationsPage';
-
 export function App() {
   const { currentUser } = usePharmacy();
   const [currentRoute, setCurrentRoute] = useState('admin-dashboard');
@@ -39,8 +32,6 @@ export function App() {
     if (currentUser) {
       if (currentUser.role === 'supervisor' || currentUser.role === 'admin' || currentUser.role === 'owner') {
         setCurrentRoute('admin-dashboard');
-      } else if (currentUser.role === 'stockkeeper') {
-        setCurrentRoute('stock-dashboard');
       } else {
         setCurrentRoute('worker-search');
       }
@@ -54,8 +45,6 @@ export function App() {
           onLoginSuccess={(user) => {
             if (user.role === 'supervisor' || user.role === 'admin' || user.role === 'owner') {
               setCurrentRoute('admin-dashboard');
-            } else if (user.role === 'stockkeeper') {
-              setCurrentRoute('stock-dashboard');
             } else {
               setCurrentRoute('worker-search');
             }
@@ -117,23 +106,9 @@ export function App() {
       case 'worker-activity':
         return <WorkerActivity />;
 
-      // Stock Keeper Routes
-      case 'stock-dashboard':
-        return <StockKeeperDashboard setCurrentRoute={setCurrentRoute} />;
-      case 'stock-new-batch':
-        return <NewBatchPage setCurrentRoute={setCurrentRoute} />;
-      case 'stock-arrangement':
-        return <MedicineArrangementPage setCurrentRoute={setCurrentRoute} />;
-      case 'stock-locations':
-        return <LocationManagementPage setCurrentRoute={setCurrentRoute} />;
-      case 'stock-notifications':
-        return <StockNotificationsPage setCurrentRoute={setCurrentRoute} />;
-
       default:
         if (currentUser.role === 'supervisor' || currentUser.role === 'admin' || currentUser.role === 'owner') {
           return <AdminDashboard setCurrentRoute={setCurrentRoute} />;
-        } else if (currentUser.role === 'stockkeeper') {
-          return <StockKeeperDashboard setCurrentRoute={setCurrentRoute} />;
         } else {
           return (
             <WorkerSearch

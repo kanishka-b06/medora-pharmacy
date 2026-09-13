@@ -15,18 +15,13 @@ import {
   UserCheck,
   X,
   Pill,
-  ShieldCheck,
-  PlusCircle,
-  ClipboardList,
-  MapPin,
-  Bell
+  ShieldCheck
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
 
 export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMobile }) {
-  const { currentUser, logout, stats, skStats } = usePharmacy();
+  const { currentUser, logout, stats } = usePharmacy();
   const isSupervisor = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
-  const isStockKeeper = currentUser?.role === 'stockkeeper';
 
   const supervisorNavItems = [
     { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -73,27 +68,7 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
     { id: 'worker-activity', label: 'My Activity', icon: History }
   ];
 
-  const stockKeeperNavItems = [
-    { id: 'stock-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'stock-new-batch', label: 'Add New Batch', icon: PlusCircle },
-    {
-      id: 'stock-arrangement',
-      label: 'Batch Arrangement',
-      icon: ClipboardList,
-      badge: skStats?.unarrangedBatchesCount > 0 ? `${skStats.unarrangedBatchesCount} pending` : null,
-      badgeColor: 'bg-amber-100 text-amber-800'
-    },
-    { id: 'stock-locations', label: 'Location Map', icon: MapPin },
-    {
-      id: 'stock-notifications',
-      label: 'Notifications',
-      icon: Bell,
-      badge: skStats?.unreadSKNotifs > 0 ? `${skStats.unreadSKNotifs}` : null,
-      badgeColor: 'bg-rose-100 text-rose-800'
-    },
-  ];
-
-  const navItems = isSupervisor ? supervisorNavItems : isStockKeeper ? stockKeeperNavItems : staffNavItems;
+  const navItems = isSupervisor ? supervisorNavItems : staffNavItems;
 
   const handleNavClick = (id) => {
     setCurrentRoute(id);
@@ -129,8 +104,6 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
 
         {/* Navigation List */}
         <nav className="flex-1 px-3 pt-4 pb-2 space-y-1 overflow-y-auto">
-
-
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentRoute === item.id;
@@ -165,7 +138,6 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
             );
           })}
         </nav>
-
 
         {/* Footer Logout */}
         <div className="p-3 border-t border-teal-100/80">

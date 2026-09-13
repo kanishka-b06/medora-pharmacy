@@ -9,27 +9,24 @@ import {
   ShieldCheck, 
   UserCheck, 
   ChevronDown,
-  Sparkles,
-  AlertCircle,
-  Boxes
+  Sparkles
 } from 'lucide-react';
 import { usePharmacy } from '../../context/PharmacyContext';
 import { ArchitectureDiagramModal } from '../common/ArchitectureDiagramModal';
 
 export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute }) {
-  const { currentUser, logout, resetDemoData, stats, settings } = usePharmacy();
+  const { currentUser, logout, resetDemoData } = usePharmacy();
   const [showArchModal, setShowArchModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const isSupervisor = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
-  const isStockKeeper = currentUser?.role === 'stockkeeper';
 
   return (
     <>
       <header className="sticky top-0 z-40 w-full h-16 bg-white/95 backdrop-blur-md border-b border-teal-100/90 px-4 sm:px-6 shadow-[0_2px_12px_-2px_rgba(13,148,136,0.03)] flex items-center">
         <div className="flex items-center justify-between gap-4 w-full">
-          {/* Left: Mobile Menu Toggle & Brand (Single Top-Left MEDORA Header) */}
+          {/* Left: Mobile Menu Toggle & Brand */}
           <div className="flex items-center gap-3">
             <button
               onClick={onToggleMobileSidebar}
@@ -40,7 +37,7 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
             </button>
 
             <div 
-              onClick={() => setCurrentRoute(isSupervisor ? 'admin-dashboard' : isStockKeeper ? 'stock-dashboard' : 'worker-search')}
+              onClick={() => setCurrentRoute(isSupervisor ? 'admin-dashboard' : 'worker-search')}
               className="flex items-center gap-2.5 cursor-pointer group"
             >
               <div className="w-9 h-9 rounded-full bg-[#11b3a1] flex items-center justify-center text-white shadow-md shadow-[#11b3a1]/25 group-hover:scale-105 transition-transform">
@@ -62,27 +59,20 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
             </div>
           </div>
 
-          {/* Right: Quick Actions, Demo Tag, User Profile */}
+          {/* Right: Role Badge & User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
-
-
-
             {/* Role Badge */}
             <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
               isSupervisor 
                 ? 'bg-teal-50 text-teal-800 border border-teal-200 shadow-sm' 
-                : isStockKeeper
-                ? 'bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-sm ring-1 ring-teal-500/20'
                 : 'bg-slate-50 text-slate-700 border border-slate-200 shadow-sm'
             }`}>
               {isSupervisor ? (
                 <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-              ) : isStockKeeper ? (
-                <Boxes className="w-3.5 h-3.5 text-teal-700" />
               ) : (
                 <UserCheck className="w-3.5 h-3.5 text-slate-500" />
               )}
-              <span>{isSupervisor ? 'Owner' : isStockKeeper ? 'Stock Keeper' : 'Worker'}</span>
+              <span>{isSupervisor ? 'Owner' : 'Worker'}</span>
             </div>
 
             {/* User Dropdown */}
@@ -92,7 +82,7 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
                 className="flex items-center gap-2 p-1 sm:p-1.5 rounded-xl hover:bg-teal-50/60 border border-transparent hover:border-teal-200 transition-all text-left"
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm ${
-                  isSupervisor ? 'bg-gradient-to-br from-teal-600 to-teal-700' : isStockKeeper ? 'bg-gradient-to-br from-teal-700 to-emerald-700' : 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                  isSupervisor ? 'bg-gradient-to-br from-teal-600 to-teal-700' : 'bg-gradient-to-br from-emerald-600 to-teal-600'
                 }`}>
                   {currentUser?.name?.charAt(0) || 'U'}
                 </div>
@@ -114,13 +104,11 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
                       <p className="text-xs font-bold text-slate-900">{currentUser?.name}</p>
                       <p className="text-xs text-slate-500">{currentUser?.email}</p>
                       <span className={`mt-1.5 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${
-                        isSupervisor ? 'bg-teal-100 text-teal-800' : isStockKeeper ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                        isSupervisor ? 'bg-teal-100 text-teal-800' : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {currentUser?.roleTitle || (isSupervisor ? 'Pharmacy Owner' : isStockKeeper ? 'Stock Keeper & Batch Manager' : 'Staff Dispenser')}
+                        {currentUser?.roleTitle || (isSupervisor ? 'Pharmacy Owner' : 'Staff Dispenser')}
                       </span>
                     </div>
-
-
 
                     <div className="py-1 border-t border-slate-100">
                       <button

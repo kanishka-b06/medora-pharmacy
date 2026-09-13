@@ -6,9 +6,7 @@ import {
   INITIAL_SALES,
   INITIAL_AI_SUGGESTIONS,
   INITIAL_ACTIVITIES,
-  INITIAL_SETTINGS,
-  INITIAL_BATCHES,
-  INITIAL_NOTIFICATIONS
+  INITIAL_SETTINGS
 } from '../data/initialData';
 import { getStockStatus, calculateExpiryRisk } from '../services/aiMatchingEngine';
 
@@ -92,19 +90,15 @@ export function PharmacyProvider({ children }) {
     try {
       const saved = localStorage.getItem('medora_users');
       let loaded = saved ? JSON.parse(saved) : [...INITIAL_USERS];
-      // Ensure all INITIAL_USERS (especially usr-stockkeeper) exist
+      // Filter out any legacy stockkeeper accounts
+      loaded = loaded.filter((u) => u.role !== 'stockkeeper' && u.username !== 'stockkeeper');
       const existingUsernames = new Set(loaded.map((u) => u.username?.toLowerCase()));
       INITIAL_USERS.forEach((initUser) => {
         if (!existingUsernames.has(initUser.username?.toLowerCase())) {
           loaded.push(initUser);
         }
       });
-      return loaded.map((u) => {
-        if (u.name === 'Sarah' || u.id === 'usr-supervisor' || u.username === 'supervisor') {
-          return { ...u, role: 'owner', roleTitle: 'Pharmacy Owner' };
-        }
-        return u;
-      });
+      return loaded;
     } catch {
       return INITIAL_USERS;
     }
@@ -112,44 +106,21 @@ export function PharmacyProvider({ children }) {
 
   const [settings, setSettings] = useState(() => {
     try {
-      const saved = localStorage.getItem('medora_settings');
+      const saved = localStorage.getItem('medora_settings') || localStorage.getItem('pharmassist_settings');
       return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
     } catch {
       return INITIAL_SETTINGS;
     }
   });
 
-  const [batches, setBatches] = useState(() => {
-    try {
-      const saved = localStorage.getItem('medora_batches');
-      return saved ? JSON.parse(saved) : INITIAL_BATCHES;
-    } catch {
-      return INITIAL_BATCHES;
-    }
-  });
-
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem('medora_notifications');
-      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-    } catch {
-      return INITIAL_NOTIFICATIONS;
-    }
-  });
-
-  // Active Toasts
   const [toasts, setToasts] = useState([]);
 
-  // Sync state changes to localStorage
+  // LocalStorage Synchronization
   useEffect(() => {
-    try {
-      if (currentUser) {
-        localStorage.setItem('medora_currentUser', JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem('medora_currentUser');
-      }
-    } catch (e) {
-      console.error('Storage sync error:', e);
+    if (currentUser) {
+      localStorage.setItem('medora_currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('medora_currentUser');
     }
   }, [currentUser]);
 
@@ -181,348 +152,273 @@ export function PharmacyProvider({ children }) {
     localStorage.setItem('medora_settings', JSON.stringify(settings));
   }, [settings]);
 
-  useEffect(() => {
-    localStorage.setItem('medora_batches', JSON.stringify(batches));
-  }, [batches]);
-
-  useEffect(() => {
-    localStorage.setItem('medora_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  // Toast Helpers
-  const addToast = (toast) => {
-    const id = Date.now() + Math.random().toString(36).substr(2, 4);
-    const newToast = { id, type: 'info', duration: 4000, ...toast };
-    setToasts((prev) => [...prev, newToast]);
-
-    if (newToast.duration > 0) {
+  // Toast System
+  const addToast = ({ type = 'info', title, message, duration = 4000 }) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    setToasts((prev) => [...prev, { id, type, title, message }]);
+    if (duration > 0) {
       setTimeout(() => {
         removeToast(id);
-      }, newToast.duration);
+      }, duration);
     }
+    return id;
   };
 
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Activity Logger Helper
-  const logActivity = (action, medicine, details) => {
+  // Activity Logger
+  const logActivity = (action, target, details, performedBy = null) => {
+    const userString = performedBy || (currentUser ? `${currentUser.name} (${currentUser.username})` : 'System');
     const newActivity = {
-      id: `act-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      user: currentUser ? `${currentUser.name} (${currentUser.username})` : 'System',
-      role: currentUser ? currentUser.role : 'system',
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       action,
-      medicine: typeof medicine === 'string' ? medicine : medicine?.name || 'General',
-      details
+      target,
+      details,
+      performedBy: userString,
+      timestamp: new Date().toISOString()
     };
     setActivities((prev) => [newActivity, ...prev]);
+    return newActivity;
   };
 
-  // Authentication Actions
-  const login = (username, password, role) => {
-    const trimmedUsername = (username || '').trim().toLowerCase();
-    
-    // Normalize role selection if provided
-    const targetRole = role === 'admin' || role === 'owner' ? 'supervisor' : role === 'worker' ? 'staff' : role === 'stockkeeper' ? 'stockkeeper' : role;
+  // Auth Operations
+  const login = (username, password) => {
+    if (!username || !password) {
+      return { success: false, message: 'Please provide both username and password.' };
+    }
 
-    // Check credentials against demo users or custom users (by username or email)
+    const trimmedUsername = username.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
     let matchedUser = users.find(
-      (u) => (
+      (u) =>
         u.username.toLowerCase() === trimmedUsername ||
-        (u.email && u.email.toLowerCase() === trimmedUsername) ||
-        (trimmedUsername === 'owner' && (u.role === 'supervisor' || u.role === 'admin' || u.role === 'owner')) ||
-        (trimmedUsername === 'supervisor' && (u.role === 'supervisor' || u.role === 'admin' || u.role === 'owner')) ||
-        (trimmedUsername === 'worker' && (u.role === 'staff' || u.role === 'worker')) ||
-        (trimmedUsername === 'staff' && (u.role === 'staff' || u.role === 'worker')) ||
-        (trimmedUsername === 'stockkeeper' && u.role === 'stockkeeper') ||
-        (trimmedUsername === 'stock' && u.role === 'stockkeeper')
-      ) && u.status === 'active'
+        (u.email && u.email.toLowerCase() === trimmedUsername)
     );
 
-    // Fallback for demo users and email matching against INITIAL_USERS
+    // Default prototype fallback checks
     if (!matchedUser) {
       if (
         trimmedUsername === 'supervisor' ||
         trimmedUsername === 'admin' ||
         trimmedUsername === 'owner' ||
-        trimmedUsername === 'kanishka.b6906@gmail.com' ||
-        trimmedUsername === 'supervisor@medora.local'
+        trimmedUsername === 'sarah' ||
+        trimmedUsername === 'kanishka.b6906@gmail.com'
       ) {
-        matchedUser = INITIAL_USERS.find(u => u.role === 'supervisor' || u.role === 'owner');
+        matchedUser = INITIAL_USERS.find((u) => u.id === 'usr-supervisor') || {
+          id: 'usr-supervisor',
+          username: 'supervisor',
+          name: 'Sarah',
+          role: 'owner',
+          email: 'kanishka.b6906@gmail.com',
+          status: 'active',
+          avatarColor: 'bg-teal-600',
+          roleTitle: 'Pharmacy Owner'
+        };
       } else if (
         trimmedUsername === 'staff' ||
-        trimmedUsername === 'worker1' ||
         trimmedUsername === 'worker' ||
+        trimmedUsername === 'arun' ||
         trimmedUsername === 'staff@medora.local'
       ) {
-        matchedUser = INITIAL_USERS.find(u => u.role === 'staff');
-      } else if (
-        trimmedUsername === 'stockkeeper' ||
-        trimmedUsername === 'stock' ||
-        trimmedUsername === 'stockkeeper@medora.local'
-      ) {
-        matchedUser = INITIAL_USERS.find(u => u.role === 'stockkeeper');
-      } else {
-        matchedUser = INITIAL_USERS.find(u => u.email && u.email.toLowerCase() === trimmedUsername);
+        matchedUser = INITIAL_USERS.find((u) => u.id === 'usr-staff') || {
+          id: 'usr-staff',
+          username: 'staff',
+          name: 'Arun',
+          role: 'staff',
+          email: 'staff@medora.local',
+          status: 'active',
+          avatarColor: 'bg-blue-600',
+          roleTitle: 'Pharmacy Staff Dispenser'
+        };
       }
     }
 
     if (!matchedUser) {
-      return { success: false, message: 'Invalid username or user account is disabled.' };
+      return { success: false, message: 'Account not found. Please check your credentials.' };
     }
 
-    // Role check only if explicitly specified
-    if (targetRole && matchedUser.role !== targetRole) {
-      return {
-        success: false,
-        message: `Account "${matchedUser.username}" is configured as ${
-          matchedUser.role === 'supervisor' || matchedUser.role === 'owner' ? 'Owner' :
-          matchedUser.role === 'stockkeeper' ? 'Stock Keeper' : 'Worker'
-        }.`
-      };
+    if (matchedUser.status === 'inactive') {
+      return { success: false, message: 'This account has been deactivated. Please contact the administrator.' };
     }
 
-    // Password check
-    const isOwner = matchedUser.role === 'supervisor' || matchedUser.role === 'admin' || matchedUser.role === 'owner';
-    const isStockKeeper = matchedUser.role === 'stockkeeper';
-    const validPassword = 
-      (isOwner && (
-        password === 'owner123' || 
-        password === 'owner' || 
-        password === 'supervisor123' || 
-        password === 'supervisor' || 
-        password === 'admin123' ||
-        password === 'admin'
-      )) ||
-      (isStockKeeper && (
-        password === 'stock123' ||
-        password === 'stock' ||
-        password === 'stockkeeper123' ||
-        password === 'stockkeeper'
-      )) ||
-      (!isOwner && !isStockKeeper && (
-        password === 'worker123' || 
-        password === 'worker' || 
-        password === 'staff123' || 
-        password === 'staff'
-      ));
+    const isSupervisor =
+      matchedUser.role === 'supervisor' || matchedUser.role === 'admin' || matchedUser.role === 'owner';
+    const isWorker =
+      matchedUser.role === 'staff' || matchedUser.role === 'worker';
 
-    if (!validPassword && password !== 'demo') {
-      return { 
-        success: false, 
-        message: isOwner 
-          ? 'Invalid password. (Demo: owner123 or supervisor123)' 
-          : isStockKeeper
-          ? 'Invalid password. (Demo: stock123 or stockkeeper123)'
-          : 'Invalid password. (Demo: worker123 or staff123)' 
-      };
+    const isValidPassword =
+      trimmedPassword === 'admin123' ||
+      trimmedPassword === 'supervisor123' ||
+      trimmedPassword === 'staff123' ||
+      trimmedPassword === 'worker123' ||
+      trimmedPassword === 'demo123' ||
+      trimmedPassword === 'password' ||
+      trimmedPassword === `${matchedUser.username}123` ||
+      (isSupervisor && trimmedPassword === 'supervisor123') ||
+      (isWorker && trimmedPassword === 'staff123');
+
+    if (!isValidPassword) {
+      return { success: false, message: 'Incorrect password. Please try again.' };
     }
 
-    const sessionUser = {
+    const normalizedUser = {
       ...matchedUser,
-      lastActive: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      role: isSupervisor ? 'owner' : 'staff',
+      roleTitle: isSupervisor ? 'Pharmacy Owner' : 'Pharmacy Staff Dispenser'
     };
 
-    setCurrentUser(sessionUser);
-    
-    // Update lastActive in users array
+    setCurrentUser(normalizedUser);
+
     setUsers((prev) =>
-      prev.map((u) => (u.id === matchedUser.id ? { ...u, lastActive: 'Just now' } : u))
+      prev.map((u) => (u.id === normalizedUser.id ? { ...u, lastActive: 'Just now' } : u))
     );
 
-    const portalName = isOwner ? 'Owner Management Portal' : isStockKeeper ? 'Stock Keeper Portal' : 'Worker Portal';
+    logActivity('User Login', normalizedUser.name, `Logged into ${isSupervisor ? 'Owner' : 'Worker'} Portal.`, normalizedUser.name);
 
     addToast({
       type: 'success',
-      title: 'Welcome Back',
-      message: `Signed in as ${matchedUser.name} (${portalName})`
+      title: `Welcome, ${normalizedUser.name}!`,
+      message: `Signed in to ${isSupervisor ? 'Owner' : 'Worker'} Portal.`
     });
 
-    return { success: true, user: sessionUser };
+    return { success: true, user: normalizedUser };
   };
 
   const logout = () => {
     if (currentUser) {
-      logActivity('User Logout', 'System Session', `${currentUser.name} signed out.`);
+      logActivity('User Logout', currentUser.name, 'Signed out of system session.');
     }
     setCurrentUser(null);
     localStorage.removeItem('medora_currentUser');
-    addToast({
-      type: 'info',
-      title: 'Signed Out',
-      message: 'You have been safely signed out of MEDORA.'
-    });
+    addToast({ type: 'info', title: 'Signed Out', message: 'You have been logged out securely.' });
   };
 
   const switchUserRole = (targetRole) => {
-    let targetUser;
-    if (targetRole === 'stockkeeper') {
-      targetUser = users.find((u) => u.role === 'stockkeeper') || INITIAL_USERS.find((u) => u.role === 'stockkeeper');
-    } else if (targetRole === 'supervisor' || targetRole === 'owner' || targetRole === 'admin') {
-      targetUser = users.find((u) => u.role === 'supervisor' || u.role === 'owner') || INITIAL_USERS.find((u) => u.role === 'supervisor');
-    } else {
-      targetUser = users.find((u) => u.role === 'staff' || u.role === 'worker') || INITIAL_USERS.find((u) => u.role === 'staff');
-    }
-    if (targetUser) {
-      setCurrentUser(targetUser);
-      localStorage.setItem('medora_currentUser', JSON.stringify(targetUser));
-      addToast({
-        type: 'info',
-        title: 'Switched Role',
-        message: `Now viewing as ${targetUser.name} (${targetUser.roleTitle || targetRole})`
-      });
-      return targetUser;
-    }
+    if (!currentUser) return;
+    const isOwner = targetRole === 'admin' || targetRole === 'supervisor' || targetRole === 'owner';
+    const updated = {
+      ...currentUser,
+      role: isOwner ? 'owner' : 'staff',
+      roleTitle: isOwner ? 'Pharmacy Owner' : 'Pharmacy Staff Dispenser'
+    };
+    setCurrentUser(updated);
+    addToast({
+      type: 'info',
+      title: 'Portal Switched',
+      message: `Switched view to ${isOwner ? 'Owner' : 'Worker'} mode.`
+    });
   };
 
-  // Medicine Inventory Management Actions
+  // Medicine Inventory CRUD
   const addMedicine = (medicineData) => {
-    const newId = `med-${Date.now()}`;
+    const newId = `med-${Date.now().toString().slice(-4)}`;
+    const parsedQty = parseInt(medicineData.quantity, 10) || 0;
+    const parsedPrice = parseFloat(medicineData.price) || 0;
+    const parsedLowStock = parseInt(medicineData.lowStockThreshold, 10) || settings.lowStockThresholdDefault || 10;
+
     const newMed = {
       id: newId,
       name: medicineData.name.trim(),
-      brandName: medicineData.brandName ? medicineData.brandName.trim() : medicineData.name.trim(),
+      brandName: medicineData.brandName?.trim() || medicineData.name.trim(),
       activeIngredient: medicineData.activeIngredient.trim(),
       strength: medicineData.strength.trim(),
       dosageForm: medicineData.dosageForm || 'Tablet',
-      therapeuticClass: medicineData.therapeuticClass || 'General Medicine',
+      therapeuticClass: medicineData.therapeuticClass?.trim() || 'General Medicine',
       rack: medicineData.rack.toUpperCase().trim(),
       shelf: medicineData.shelf.toString().trim(),
-      quantity: Math.max(0, parseInt(medicineData.quantity, 10) || 0),
-      batchNumber: medicineData.batchNumber.trim().toUpperCase(),
+      quantity: parsedQty,
+      batchNumber: medicineData.batchNumber ? medicineData.batchNumber.toUpperCase().trim() : `B${Math.floor(100 + Math.random() * 900)}`,
       expiryDate: medicineData.expiryDate,
-      price: parseFloat(medicineData.price) || 0,
-      lowStockThreshold: parseInt(medicineData.lowStockThreshold, 10) || settings.lowStockThresholdDefault || 10,
+      price: parsedPrice,
+      lowStockThreshold: parsedLowStock,
       expectedRestockDate: medicineData.expectedRestockDate || '',
       orderStatus: medicineData.orderStatus || 'None',
-      supplier: medicineData.supplier || 'Apex Pharma Distributors',
+      supplier: medicineData.supplier?.trim() || 'General Medical Supplies',
+      notes: medicineData.notes || '',
       isDemo: false
     };
 
     setMedicines((prev) => [newMed, ...prev]);
-    logActivity('Medicine Added', newMed.name, `Added with initial stock ${newMed.quantity} units at Rack ${newMed.rack}, Shelf ${newMed.shelf}.`);
-    
+
+    logActivity(
+      'Medicine Added',
+      newMed.name,
+      `New medicine registered in Rack ${newMed.rack}, Shelf ${newMed.shelf} (${newMed.quantity} units, Batch ${newMed.batchNumber}).`
+    );
+
     addToast({
       type: 'success',
-      title: 'Medicine Added',
-      message: `${newMed.name} added to inventory.`
+      title: 'Medicine Added Successfully',
+      message: `${newMed.name} added at Rack ${newMed.rack} → Shelf ${newMed.shelf}.`
     });
 
     return newMed;
   };
 
-  const updateMedicine = (id, updatedFields) => {
+  const updateMedicine = (id, medicineData) => {
+    let updatedRecord = null;
+    let oldRecord = null;
+
     setMedicines((prev) =>
       prev.map((med) => {
         if (med.id === id) {
-          const updated = { ...med, ...updatedFields };
-          return updated;
+          oldRecord = med;
+          updatedRecord = {
+            ...med,
+            ...medicineData,
+            name: medicineData.name !== undefined ? medicineData.name.trim() : med.name,
+            activeIngredient: medicineData.activeIngredient !== undefined ? medicineData.activeIngredient.trim() : med.activeIngredient,
+            strength: medicineData.strength !== undefined ? medicineData.strength.trim() : med.strength,
+            rack: medicineData.rack !== undefined ? medicineData.rack.toUpperCase().trim() : med.rack,
+            shelf: medicineData.shelf !== undefined ? medicineData.shelf.toString().trim() : med.shelf,
+            quantity: medicineData.quantity !== undefined ? parseInt(medicineData.quantity, 10) : med.quantity,
+            price: medicineData.price !== undefined ? parseFloat(medicineData.price) : med.price,
+            batchNumber: medicineData.batchNumber !== undefined ? medicineData.batchNumber.toUpperCase().trim() : med.batchNumber
+          };
+          return updatedRecord;
         }
         return med;
       })
     );
 
-    const med = medicines.find((m) => m.id === id);
-    logActivity('Medicine Updated', med?.name || id, `Updated medicine specifications/locations.`);
+    if (updatedRecord) {
+      logActivity(
+        'Medicine Updated',
+        updatedRecord.name,
+        `Updated location/details: Rack ${updatedRecord.rack} → Shelf ${updatedRecord.shelf}, Stock: ${updatedRecord.quantity}.`
+      );
 
-    addToast({
-      type: 'success',
-      title: 'Medicine Updated',
-      message: `Changes saved for ${updatedFields.name || med?.name}.`
-    });
+      addToast({
+        type: 'success',
+        title: 'Medicine Details Updated',
+        message: `${updatedRecord.name} details saved.`
+      });
+    }
+
+    return updatedRecord;
   };
 
   const deleteMedicine = (id) => {
-    const med = medicines.find((m) => m.id === id);
+    const target = medicines.find((m) => m.id === id);
+    if (!target) return false;
+
     setMedicines((prev) => prev.filter((m) => m.id !== id));
-    
-    logActivity('Medicine Removed', med?.name || id, `Removed medicine record from inventory.`);
+
+    logActivity('Medicine Deleted', target.name, `Removed from inventory (Rack ${target.rack}, Shelf ${target.shelf}).`);
 
     addToast({
-      type: 'info',
-      title: 'Medicine Deleted',
-      message: `${med?.name || 'Medicine'} removed from inventory.`
+      type: 'warning',
+      title: 'Medicine Removed',
+      message: `${target.name} was removed from the inventory registry.`
     });
+
+    return true;
   };
 
-  // Stock-Zero Check Workflow:
-  // When a medicine batch reaches 0 stock:
-  // CHECK -> Is another batch of the same medicine already available?
-  // IF YES: Show notification to Stock Keeper: "New Batch Available for Arrangement"
-  // IF NO: Send notification for Owner: "Restock Required"
-  const handleStockZeroCheck = (targetMed) => {
-    // Check if another batch exists for this medicine with quantity > 0
-    const otherBatch = batches.find(
-      (b) =>
-        (b.medicineId === targetMed.id ||
-         b.medicineName.toLowerCase() === targetMed.name.toLowerCase() ||
-         (b.activeIngredient.toLowerCase() === targetMed.activeIngredient.toLowerCase() && b.strength === targetMed.strength)) &&
-        b.batchNumber !== targetMed.batchNumber &&
-        b.quantity > 0
-    );
-
-    if (otherBatch) {
-      const newNotif = {
-        id: `notif-${Date.now()}`,
-        type: 'new_batch_available',
-        recipientRole: 'stockkeeper',
-        title: 'New Batch Available for Arrangement',
-        message: `${targetMed.name} reached 0 stock. Backup Batch ${otherBatch.batchNumber} (${otherBatch.quantity} units) is in facility and ready for physical arrangement.`,
-        medicineId: targetMed.id,
-        medicineName: targetMed.name,
-        batchNumber: otherBatch.batchNumber,
-        quantity: otherBatch.quantity,
-        createdAt: new Date().toISOString(),
-        read: false,
-        actionRoute: 'stock-arrangement'
-      };
-      setNotifications((prev) => [newNotif, ...prev]);
-
-      logActivity(
-        'Stock-Zero Check',
-        targetMed.name,
-        `Stock reached 0. Found backup Batch ${otherBatch.batchNumber} (${otherBatch.quantity} units). Stock Keeper notified for arrangement.`
-      );
-
-      addToast({
-        type: 'info',
-        title: 'Stock Keeper Alert 📦',
-        message: `Backup batch ${otherBatch.batchNumber} found for ${targetMed.name}. Notified Stock Keeper.`
-      });
-    } else {
-      const newNotif = {
-        id: `notif-${Date.now() + 1}`,
-        type: 'stock_zero',
-        recipientRole: 'owner',
-        title: 'Restock Required',
-        message: `${targetMed.name} has reached 0 stock and NO other batch is available in the pharmacy. Supplier purchase order required.`,
-        medicineId: targetMed.id,
-        medicineName: targetMed.name,
-        batchNumber: targetMed.batchNumber,
-        quantity: 0,
-        createdAt: new Date().toISOString(),
-        read: false,
-        actionRoute: 'admin-orders'
-      };
-      setNotifications((prev) => [newNotif, ...prev]);
-
-      logActivity(
-        'Stock-Zero Check',
-        targetMed.name,
-        `Stock reached 0 with NO backup batches available. Owner restock alert generated.`
-      );
-
-      addToast({
-        type: 'warning',
-        title: 'Restock Required ⚠️',
-        message: `No backup batch for ${targetMed.name}. Owner notified to restock.`
-      });
-    }
-  };
-
-  const correctStock = (id, newQuantity, reason = 'Inventory Count Audit') => {
+  const correctStock = (id, newQuantity, reason = 'Inventory audit') => {
     const targetQty = Math.max(0, parseInt(newQuantity, 10) || 0);
     let medName = '';
     let oldQty = 0;
@@ -547,13 +443,9 @@ export function PharmacyProvider({ children }) {
       title: 'Stock Updated',
       message: `${medName} stock updated from ${oldQty} → ${targetQty}.`
     });
-
-    if (targetQty === 0 && targetMed) {
-      handleStockZeroCheck(targetMed);
-    }
   };
 
-  // Record Sale Action (Core Sales & Dispensing Calculation: Previous - Sold = Remaining)
+  // Record Sale Action (Previous - Sold = Remaining)
   const recordSale = (saleData) => {
     const { medicineId, quantitySold, customerType = 'Walk-in Customer', notes = '' } = saleData;
     const qtySold = parseInt(quantitySold, 10);
@@ -584,8 +476,9 @@ export function PharmacyProvider({ children }) {
     const totalAmount = unitPrice * qtySold;
 
     // Update Medicine Stock
+    const updatedMed = { ...targetMed, quantity: remainingStock };
     setMedicines((prev) =>
-      prev.map((med) => (med.id === medicineId ? { ...med, quantity: remainingStock } : med))
+      prev.map((med) => (med.id === medicineId ? updatedMed : med))
     );
 
     // Append to Sales Log
@@ -626,293 +519,16 @@ export function PharmacyProvider({ children }) {
       message: `Stock updated: ${previousStock} → ${remainingStock} units.${statusNotice}`
     });
 
-    // Trigger Stock-Zero workflow if stock hit 0
-    if (remainingStock === 0) {
-      handleStockZeroCheck(targetMed);
-    }
-
     return { success: true, sale: newSale, remainingStock };
   };
 
-  // Stock Keeper Actions: Batch Creation, Arrangement, Location Updates
-  const addNewBatch = (batchData) => {
-    const {
-      medicineName,
-      activeIngredient = '',
-      strength = '',
-      dosageForm = 'Tablet',
-      batchNumber,
-      expiryDate,
-      quantity,
-      rack = '',
-      shelf = '',
-      notes = ''
-    } = batchData;
-
-    const qty = Math.max(0, parseInt(quantity, 10) || 0);
-    const cleanBatchNo = (batchNumber || '').trim().toUpperCase();
-    const cleanMedName = (medicineName || '').trim();
-    const cleanRack = (rack || '').trim().toUpperCase();
-    const cleanShelf = (shelf || '').toString().trim();
-    const isArranged = Boolean(cleanRack && cleanShelf);
-
-    // Find if medicine already exists in medicines array
-    const existingMed = medicines.find(
-      (m) =>
-        m.name.toLowerCase() === cleanMedName.toLowerCase() ||
-        (m.activeIngredient.toLowerCase() === activeIngredient.toLowerCase() && m.strength === strength)
-    );
-
-    const newBatch = {
-      id: `batch-${Date.now()}`,
-      medicineId: existingMed ? existingMed.id : `med-${Date.now()}`,
-      medicineName: cleanMedName,
-      activeIngredient: activeIngredient || existingMed?.activeIngredient || 'General Ingredient',
-      strength: strength || existingMed?.strength || '',
-      dosageForm: dosageForm || existingMed?.dosageForm || 'Tablet',
-      batchNumber: cleanBatchNo,
-      expiryDate,
-      quantity: qty,
-      rack: cleanRack,
-      shelf: cleanShelf,
-      status: isArranged ? 'Arranged' : 'Unarranged',
-      arrangedAt: isArranged ? new Date().toISOString() : null,
-      notes: notes || 'Batch logged by Stock Keeper'
-    };
-
-    setBatches((prev) => [newBatch, ...prev]);
-
-    // If arranged immediately, also reflect into medicines inventory so Worker can see it!
-    if (isArranged) {
-      if (existingMed) {
-        setMedicines((prev) =>
-          prev.map((m) => {
-            if (m.id === existingMed.id) {
-              return {
-                ...m,
-                rack: cleanRack,
-                shelf: cleanShelf,
-                quantity: m.quantity + qty,
-                batchNumber: newBatch.batchNumber,
-                expiryDate: newBatch.expiryDate
-              };
-            }
-            return m;
-          })
-        );
-      } else {
-        const newMedRecord = {
-          id: newBatch.medicineId,
-          name: cleanMedName,
-          brandName: cleanMedName,
-          activeIngredient: newBatch.activeIngredient,
-          strength: newBatch.strength,
-          dosageForm: newBatch.dosageForm,
-          therapeuticClass: 'General Medicine',
-          rack: cleanRack,
-          shelf: cleanShelf,
-          quantity: qty,
-          batchNumber: newBatch.batchNumber,
-          expiryDate: newBatch.expiryDate,
-          price: 25.00,
-          lowStockThreshold: settings.lowStockThresholdDefault || 10,
-          expectedRestockDate: '',
-          orderStatus: 'None',
-          supplier: 'Apex Pharma Distributors',
-          isDemo: false
-        };
-        setMedicines((prev) => [newMedRecord, ...prev]);
-      }
-      logActivity('Batch Arranged', cleanMedName, `Batch ${cleanBatchNo} (${qty} units) arranged at Rack ${cleanRack}, Shelf ${cleanShelf}.`);
-    } else {
-      logActivity('New Batch Added', cleanMedName, `Added Batch ${cleanBatchNo} (${qty} units) to Unarranged queue.`);
-    }
-
-    addToast({
-      type: 'success',
-      title: isArranged ? 'Batch Added & Arranged' : 'Batch Added (Unarranged)',
-      message: `${cleanMedName} [Batch ${cleanBatchNo}] recorded with ${qty} units.`
-    });
-
-    return newBatch;
-  };
-
-  const arrangeBatch = (batchId, { rack, shelf }) => {
-    const cleanRack = rack.toUpperCase().trim();
-    const cleanShelf = shelf.toString().trim();
-    let updatedBatch = null;
-
-    setBatches((prev) =>
-      prev.map((b) => {
-        if (b.id === batchId) {
-          updatedBatch = {
-            ...b,
-            rack: cleanRack,
-            shelf: cleanShelf,
-            status: 'Arranged',
-            arrangedAt: new Date().toISOString()
-          };
-          return updatedBatch;
-        }
-        return b;
-      })
-    );
-
-    if (!updatedBatch) return null;
-
-    // Reflect into MEDORA inventory so Worker can see Rack/Shelf immediately
-    setMedicines((prev) => {
-      const match = prev.find(
-        (m) =>
-          m.id === updatedBatch.medicineId ||
-          m.name.toLowerCase() === updatedBatch.medicineName.toLowerCase() ||
-          (m.activeIngredient.toLowerCase() === updatedBatch.activeIngredient.toLowerCase() && m.strength === updatedBatch.strength)
-      );
-
-      if (match) {
-        return prev.map((m) => {
-          if (m.id === match.id) {
-            const newQty = m.quantity === 0 ? updatedBatch.quantity : m.quantity + updatedBatch.quantity;
-            return {
-              ...m,
-              rack: cleanRack,
-              shelf: cleanShelf,
-              quantity: newQty,
-              batchNumber: updatedBatch.batchNumber,
-              expiryDate: updatedBatch.expiryDate
-            };
-          }
-          return m;
-        });
-      } else {
-        const newMed = {
-          id: updatedBatch.medicineId || `med-${Date.now()}`,
-          name: updatedBatch.medicineName,
-          brandName: updatedBatch.medicineName,
-          activeIngredient: updatedBatch.activeIngredient,
-          strength: updatedBatch.strength,
-          dosageForm: updatedBatch.dosageForm,
-          therapeuticClass: 'General Medicine',
-          rack: cleanRack,
-          shelf: cleanShelf,
-          quantity: updatedBatch.quantity,
-          batchNumber: updatedBatch.batchNumber,
-          expiryDate: updatedBatch.expiryDate,
-          price: 25.0,
-          lowStockThreshold: settings.lowStockThresholdDefault || 10,
-          expectedRestockDate: '',
-          orderStatus: 'None',
-          supplier: 'Apex Pharma Distributors',
-          isDemo: false
-        };
-        return [newMed, ...prev];
-      }
-    });
-
-    logActivity(
-      'Batch Arranged',
-      updatedBatch.medicineName,
-      `Batch ${updatedBatch.batchNumber} placed at Rack ${cleanRack}, Shelf ${cleanShelf} (${updatedBatch.quantity} units). Status: Available.`
-    );
-
-    // Mark related Stock Keeper notifications as read
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.batchNumber === updatedBatch.batchNumber ? { ...n, read: true } : n
-      )
-    );
-
-    addToast({
-      type: 'success',
-      title: 'Batch Arranged & Available 🟢',
-      message: `${updatedBatch.medicineName} (Batch ${updatedBatch.batchNumber}) placed at Rack ${cleanRack}, Shelf ${cleanShelf}.`
-    });
-
-    return updatedBatch;
-  };
-
-  const updateBatchLocation = (batchId, { rack, shelf }) => {
-    const cleanRack = rack.toUpperCase().trim();
-    const cleanShelf = shelf.toString().trim();
-    let targetBatch = null;
-
-    setBatches((prev) =>
-      prev.map((b) => {
-        if (b.id === batchId) {
-          targetBatch = { ...b, rack: cleanRack, shelf: cleanShelf };
-          return targetBatch;
-        }
-        return b;
-      })
-    );
-
-    if (targetBatch) {
-      setMedicines((prev) =>
-        prev.map((m) => {
-          if (m.id === targetBatch.medicineId || m.name.toLowerCase() === targetBatch.medicineName.toLowerCase()) {
-            return { ...m, rack: cleanRack, shelf: cleanShelf };
-          }
-          return m;
-        })
-      );
-
-      logActivity(
-        'Rack/Shelf Updated',
-        targetBatch.medicineName,
-        `Moved Batch ${targetBatch.batchNumber} to Rack ${cleanRack}, Shelf ${cleanShelf}.`
-      );
-
-      addToast({
-        type: 'success',
-        title: 'Location Updated',
-        message: `${targetBatch.medicineName} location updated to Rack ${cleanRack}, Shelf ${cleanShelf}.`
-      });
-    }
-  };
-
-  const markBatchAvailable = (batchId) => {
-    const b = batches.find((x) => x.id === batchId);
-    if (!b) return;
-    if (!b.rack || !b.shelf) {
-      addToast({ type: 'warning', title: 'Location Missing', message: 'Please assign Rack and Shelf first.' });
-      return;
-    }
-    arrangeBatch(batchId, { rack: b.rack, shelf: b.shelf });
-    logActivity('Batch Marked Available', b.medicineName, `Batch ${b.batchNumber} marked available for worker dispensing.`);
-  };
-
-  const addNotification = (notifData) => {
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      read: false,
-      ...notifData
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
-    return newNotif;
-  };
-
-  const markNotificationAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
-
-  const clearNotifications = (role) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        role ? (n.recipientRole === role ? { ...n, read: true } : n) : { ...n, read: true }
-      )
-    );
-  };
-
-  // Orders and Restock Actions
+  // Orders and Restock
   const createOrder = (orderData) => {
     const newOrder = {
-      id: `ord-${Date.now()}`,
-      medicineId: orderData.medicineId,
-      medicineName: orderData.medicineName,
-      supplier: orderData.supplier || 'Primary Supplier',
+      id: `po-${Date.now().toString().slice(-4)}`,
+      medicineId: orderData.medicineId || '',
+      medicineName: orderData.medicineName || 'Medicine Restock',
+      supplier: orderData.supplier || 'Apex Pharma Distributors',
       orderedQuantity: parseInt(orderData.orderedQuantity, 10) || 50,
       orderDate: orderData.orderDate || new Date().toISOString().split('T')[0],
       expectedArrivalDate: orderData.expectedArrivalDate || '',
@@ -927,15 +543,16 @@ export function PharmacyProvider({ children }) {
     // Update medicine expected restock & order status
     if (orderData.medicineId) {
       setMedicines((prev) =>
-        prev.map((med) =>
-          med.id === orderData.medicineId
-            ? {
-                ...med,
-                orderStatus: newOrder.status,
-                expectedRestockDate: newOrder.expectedArrivalDate
-              }
-            : med
-        )
+        prev.map((med) => {
+          if (med.id === orderData.medicineId) {
+            return {
+              ...med,
+              orderStatus: newOrder.status,
+              expectedRestockDate: newOrder.expectedArrivalDate
+            };
+          }
+          return med;
+        })
       );
     }
 
@@ -975,15 +592,16 @@ export function PharmacyProvider({ children }) {
 
     if (affectedMedId) {
       setMedicines((prev) =>
-        prev.map((med) =>
-          med.id === affectedMedId
-            ? {
-                ...med,
-                orderStatus: newStatus,
-                expectedRestockDate: expectedArrivalDate || med.expectedRestockDate
-              }
-            : med
-        )
+        prev.map((med) => {
+          if (med.id === affectedMedId) {
+            return {
+              ...med,
+              orderStatus: newStatus,
+              expectedRestockDate: expectedArrivalDate || med.expectedRestockDate
+            };
+          }
+          return med;
+        })
       );
     }
 
@@ -996,7 +614,6 @@ export function PharmacyProvider({ children }) {
     });
   };
 
-  // Restock Fulfillment Action
   const receiveRestock = (medicineId, restockData) => {
     const {
       addedQuantity,
@@ -1042,11 +659,12 @@ export function PharmacyProvider({ children }) {
       );
     } else {
       setOrders((prev) =>
-        prev.map((ord) =>
-          ord.medicineId === medicineId && (ord.status === 'Ordered' || ord.status === 'In Transit')
-            ? { ...ord, status: 'Arrived' }
-            : ord
-        )
+        prev.map((ord) => {
+          if (ord.medicineId === medicineId && (ord.status === 'Ordered' || ord.status === 'In Transit')) {
+            return { ...ord, status: 'Arrived' };
+          }
+          return ord;
+        })
       );
     }
 
@@ -1076,77 +694,92 @@ export function PharmacyProvider({ children }) {
       suggestedMedicineName: suggestionObj.candidate?.name || 'Suggested Alternative',
       matchScore: suggestionObj.score || 85,
       matchReason: suggestionObj.reasons?.join('; ') || 'Database attribute similarity',
-      decision, // 'Approved' | 'Rejected' | 'Ignored' | 'Pending Review'
-      reviewedBy: currentUser ? `${currentUser.name} (${currentUser.role})` : 'Pharmacist',
+      pharmacistDecision: decision,
+      pharmacistNotes: notes,
       timestamp: new Date().toISOString(),
-      notes: notes || `Human verified match for ${suggestionObj.requestedMedicine?.name}.`
+      reviewedBy: currentUser ? `${currentUser.name} (${currentUser.role === 'owner' ? 'Owner' : 'Staff'})` : 'Pharmacist'
     };
 
     setAiSuggestions((prev) => [newRecord, ...prev]);
 
     logActivity(
-      `AI Suggestion ${decision}`,
-      suggestionObj.candidate?.name || 'Alternative Medicine',
-      `Decision "${decision}" for alternative match to ${suggestionObj.requestedMedicine?.name} (${newRecord.matchScore}% match score).`
+      `AI Alternative ${decision}`,
+      `${newRecord.suggestedMedicineName} (for ${newRecord.requestedMedicineName})`,
+      `Match score: ${newRecord.matchScore}%. Decision: ${decision}.`
     );
 
     addToast({
       type: decision === 'Approved' ? 'success' : decision === 'Rejected' ? 'warning' : 'info',
-      title: `AI Alternative ${decision}`,
-      message: `Alternative match ${decision.toLowerCase()} for ${suggestionObj.requestedMedicine?.name}.`
+      title: `Alternative ${decision}`,
+      message: `Recommendation ${decision.toLowerCase()} by ${newRecord.reviewedBy}.`
     });
+
+    return newRecord;
   };
 
-  // Staff User Management Actions
+  // Staff User Management
   const addUser = (userData) => {
     const newUser = {
-      id: `usr-${Date.now()}`,
-      username: userData.username.trim().toLowerCase(),
+      id: `usr-${Date.now().toString().slice(-4)}`,
+      username: userData.username.toLowerCase().trim(),
       name: userData.name.trim(),
       role: userData.role || 'staff',
-      email: userData.email.trim(),
+      email: userData.email?.trim() || `${userData.username}@medora.local`,
       status: 'active',
       lastActive: 'Never',
-      avatarColor: userData.role === 'supervisor' ? 'bg-teal-600' : 'bg-blue-600',
-      roleTitle: userData.roleTitle || (userData.role === 'supervisor' ? 'Pharmacy Supervisor' : 'Pharmacy Staff Dispenser')
+      avatarColor: userData.avatarColor || 'bg-teal-600',
+      roleTitle: userData.roleTitle || 'Pharmacy Assistant'
     };
 
     setUsers((prev) => [...prev, newUser]);
-    logActivity('Staff Created', 'Staff Management', `Created ${newUser.role} account "${newUser.username}".`);
-    
+    logActivity('User Account Created', newUser.name, `New user registered: @${newUser.username} (${newUser.roleTitle}).`);
     addToast({
       type: 'success',
-      title: 'Staff Account Created',
-      message: `User ${newUser.name} (@${newUser.username}) added.`
+      title: 'User Account Created',
+      message: `Account for ${newUser.name} created successfully.`
     });
+    return newUser;
   };
 
   const toggleUserStatus = (userId) => {
+    let userName = '';
+    let newStatus = '';
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id === userId) {
-          const newStatus = u.status === 'active' ? 'disabled' : 'active';
-          logActivity('Staff Status Changed', 'Staff Management', `Changed @${u.username} status to ${newStatus}.`);
+          userName = u.name;
+          newStatus = u.status === 'active' ? 'inactive' : 'active';
           return { ...u, status: newStatus };
         }
         return u;
       })
     );
+
+    logActivity('User Status Toggled', userName, `Status set to ${newStatus}.`);
+    addToast({
+      type: 'info',
+      title: 'User Status Updated',
+      message: `${userName} is now ${newStatus}.`
+    });
   };
 
   const resetUserPassword = (userId) => {
-    const u = users.find((x) => x.id === userId);
+    const target = users.find((u) => u.id === userId);
+    if (!target) return;
+    logActivity('Password Reset', target.name, `Password reset to default prototype credentials.`);
     addToast({
-      type: 'info',
+      type: 'success',
       title: 'Password Reset',
-      message: `Password for @${u?.username} reset to "${u?.role === 'supervisor' ? 'supervisor123' : 'staff123'}".`
+      message: `Password for ${target.name} reset to "${target.username}123".`
     });
-    logActivity('Password Reset', 'Staff Management', `Reset password for @${u?.username}.`);
   };
 
-  // Settings Actions
+  // System Settings Update
   const updateSettings = (newSettings) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    setSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      return updated;
+    });
     logActivity('Settings Updated', 'System Configuration', 'Updated pharmacy parameters & thresholds.');
     addToast({
       type: 'success',
@@ -1164,8 +797,6 @@ export function PharmacyProvider({ children }) {
     setActivities(INITIAL_ACTIVITIES);
     setUsers(INITIAL_USERS);
     setSettings(INITIAL_SETTINGS);
-    setBatches(INITIAL_BATCHES);
-    setNotifications(INITIAL_NOTIFICATIONS);
 
     localStorage.setItem('medora_medicines', JSON.stringify(INITIAL_MEDICINES));
     localStorage.setItem('medora_orders', JSON.stringify(INITIAL_ORDERS));
@@ -1174,15 +805,15 @@ export function PharmacyProvider({ children }) {
     localStorage.setItem('medora_activities', JSON.stringify(INITIAL_ACTIVITIES));
     localStorage.setItem('medora_users', JSON.stringify(INITIAL_USERS));
     localStorage.setItem('medora_settings', JSON.stringify(INITIAL_SETTINGS));
-    localStorage.setItem('medora_batches', JSON.stringify(INITIAL_BATCHES));
-    localStorage.setItem('medora_notifications', JSON.stringify(INITIAL_NOTIFICATIONS));
+    localStorage.removeItem('medora_batches');
+    localStorage.removeItem('medora_notifications');
 
-    logActivity('Demo Data Reset', 'System Reset', 'All inventory, sales, orders, batch records, and AI activity reset to clean demo baseline.');
+    logActivity('Demo Data Reset', 'System Reset', 'All inventory, sales, orders, and AI activity reset to clean demo baseline.');
 
     addToast({
       type: 'success',
       title: 'Demo Reset Successful',
-      message: 'All inventory, sales, batches, and demo records have been restored to initial baseline.'
+      message: 'All inventory, sales, and demo records have been restored to initial baseline.'
     });
   };
 
@@ -1195,51 +826,38 @@ export function PharmacyProvider({ children }) {
     let outOfStockCount = 0;
     let expiringSoonCount = 0;
     let highExpiryRiskCount = 0;
-
     const criticalAlerts = [];
 
-    for (const med of medicines) {
+    medicines.forEach((med) => {
       totalStock += med.quantity;
-      const stockInfo = getStockStatus(med.quantity, med.lowStockThreshold);
-      const expiryInfo = calculateExpiryRisk(med.expiryDate, settings.expiryWarningDays, settings.highRiskExpiryDays);
+      const stockInfo = getStockStatus(med.quantity, med.lowStockThreshold || settings.lowStockThresholdDefault || 10);
+      if (stockInfo.status === 'available') availableCount += 1;
+      else if (stockInfo.status === 'low_stock') lowStockCount += 1;
+      else if (stockInfo.status === 'out_of_stock') outOfStockCount += 1;
+
+      const expiryInfo = calculateExpiryRisk(
+        med.expiryDate,
+        settings.expiryWarningDays || 90,
+        settings.highRiskExpiryDays || 30
+      );
+      if (expiryInfo.status === 'high_risk') highExpiryRiskCount += 1;
+      else if (expiryInfo.status === 'expiring_soon') expiringSoonCount += 1;
 
       if (stockInfo.status === 'out_of_stock') {
-        outOfStockCount++;
         criticalAlerts.push({
-          id: `alert-oos-${med.id}`,
           type: 'out_of_stock',
-          level: 'high',
           medicine: med,
-          message: `${med.name} is completely Out of Stock (0 units).`,
-          expectedRestock: med.expectedRestockDate
+          message: `${med.name} is completely out of stock.`
         });
-      } else if (stockInfo.status === 'low_stock') {
-        lowStockCount++;
-        criticalAlerts.push({
-          id: `alert-low-${med.id}`,
-          type: 'low_stock',
-          level: 'medium',
-          medicine: med,
-          message: `${med.name} is Low Stock (${med.quantity} remaining, threshold: ${med.lowStockThreshold}).`,
-          expectedRestock: med.expectedRestockDate
-        });
-      } else {
-        availableCount++;
       }
-
-      if (expiryInfo.status === 'high_risk' || expiryInfo.status === 'expired') {
-        highExpiryRiskCount++;
+      if (expiryInfo.status === 'high_risk') {
         criticalAlerts.push({
-          id: `alert-exp-high-${med.id}`,
-          type: 'expiry_high',
-          level: 'high',
+          type: 'high_expiry_risk',
           medicine: med,
-          message: `${med.name} (Batch ${med.batchNumber}) ${expiryInfo.description}.`
+          message: `${med.name} (Batch ${med.batchNumber}) expires in ${expiryInfo.daysRemaining} days!`
         });
-      } else if (expiryInfo.status === 'expiring_soon') {
-        expiringSoonCount++;
       }
-    }
+    });
 
     const pendingOrdersCount = orders.filter((o) => o.status === 'Ordered' || o.status === 'In Transit').length;
 
@@ -1257,16 +875,6 @@ export function PharmacyProvider({ children }) {
     };
   }, [medicines, orders, settings]);
 
-  // Stock Keeper Computed Stats
-  const skStats = useMemo(() => {
-    const newBatchesCount = batches.filter((b) => !b.arrangedAt).length;
-    const unarrangedBatchesCount = batches.filter((b) => b.status === 'Unarranged').length;
-    const arrangedBatchesCount = batches.filter((b) => b.status === 'Arranged').length;
-    const unreadSKNotifs = notifications.filter((n) => n.recipientRole === 'stockkeeper' && !n.read).length;
-    const unreadOwnerNotifs = notifications.filter((n) => n.recipientRole === 'owner' && !n.read).length;
-    return { newBatchesCount, unarrangedBatchesCount, arrangedBatchesCount, unreadSKNotifs, unreadOwnerNotifs };
-  }, [batches, notifications]);
-
   const value = {
     currentUser,
     medicines,
@@ -1277,10 +885,6 @@ export function PharmacyProvider({ children }) {
     users,
     settings,
     stats,
-    // Stock Keeper data
-    batches,
-    notifications,
-    skStats,
     // Auth
     login,
     logout,
@@ -1306,15 +910,7 @@ export function PharmacyProvider({ children }) {
     // Toasts & logging
     addToast,
     removeToast,
-    logActivity,
-    // Stock Keeper actions
-    addNewBatch,
-    arrangeBatch,
-    updateBatchLocation,
-    markBatchAvailable,
-    addNotification,
-    markNotificationAsRead,
-    clearNotifications
+    logActivity
   };
 
   return <PharmacyContext.Provider value={value}>{children}</PharmacyContext.Provider>;
