@@ -28,8 +28,8 @@ export function LoginPage({ onLoginSuccess }) {
 
   /* ─── Form state ─── */
   const [selectedRole, setSelectedRole] = useState('owner'); // 'owner' | 'worker'
-  const [username, setUsername] = useState('supervisor');
-  const [password, setPassword] = useState('supervisor123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -74,14 +74,6 @@ export function LoginPage({ onLoginSuccess }) {
   const handleSelectRole = (roleType) => {
     setSelectedRole(roleType);
     setErrorMessage('');
-    // Prefill username and password for convenience if empty or previously prefilled
-    if (roleType === 'owner') {
-      setUsername('supervisor');
-      setPassword('supervisor123');
-    } else {
-      setUsername('staff');
-      setPassword('staff123');
-    }
   };
 
   /* ─── Input base classes ─── */
