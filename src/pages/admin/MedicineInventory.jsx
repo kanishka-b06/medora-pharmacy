@@ -42,55 +42,56 @@ export function MedicineInventory({ setCurrentRoute }) {
   const [correctStockMed, setCorrectStockMed] = useState(null);
   const [newStockInput, setNewStockInput] = useState('');
 
-  // Filtering & Sorting
+  // Filtering & Sorting medicines for the inventory table
   const filteredMedicines = useMemo(() => {
     return medicines
-      .filter((med) => {
-        // Search term
-        const term = searchTerm.toLowerCase().trim();
+      .filter((medicine) => {
+        // Step 1: Check if medicine matches search text
+        const searchText = searchTerm.toLowerCase().trim();
         const matchesSearch =
-          !term ||
-          med.name.toLowerCase().includes(term) ||
-          (med.brandName && med.brandName.toLowerCase().includes(term)) ||
-          med.activeIngredient.toLowerCase().includes(term) ||
-          med.strength.toLowerCase().includes(term) ||
-          med.batchNumber.toLowerCase().includes(term) ||
-          `rack ${med.rack}`.toLowerCase().includes(term) ||
-          `shelf ${med.shelf}`.toLowerCase().includes(term);
+          !searchText ||
+          medicine.name.toLowerCase().includes(searchText) ||
+          (medicine.brandName && medicine.brandName.toLowerCase().includes(searchText)) ||
+          medicine.activeIngredient.toLowerCase().includes(searchText) ||
+          medicine.strength.toLowerCase().includes(searchText) ||
+          medicine.batchNumber.toLowerCase().includes(searchText) ||
+          `rack ${medicine.rack}`.toLowerCase().includes(searchText) ||
+          `shelf ${medicine.shelf}`.toLowerCase().includes(searchText);
 
         if (!matchesSearch) return false;
 
-        // Status Filter
-        if (statusFilter === 'available' && med.quantity <= (med.lowStockThreshold || 10)) return false;
-        if (statusFilter === 'low' && (med.quantity > (med.lowStockThreshold || 10) || med.quantity === 0)) return false;
-        if (statusFilter === 'out' && med.quantity !== 0) return false;
+        // Step 2: Filter by stock status
+        const lowStockLimit = medicine.lowStockThreshold || 10;
+        if (statusFilter === 'available' && medicine.quantity <= lowStockLimit) return false;
+        if (statusFilter === 'low' && (medicine.quantity > lowStockLimit || medicine.quantity === 0)) return false;
+        if (statusFilter === 'out' && medicine.quantity !== 0) return false;
         if (statusFilter === 'expiring') {
-          const exp = calculateExpiryRisk(med.expiryDate);
-          if (exp.status === 'safe') return false;
+          const expiryInfo = calculateExpiryRisk(medicine.expiryDate);
+          if (expiryInfo.status === 'safe') return false;
         }
 
-        // Rack Filter
-        if (rackFilter !== 'all' && med.rack !== rackFilter) return false;
+        // Step 3: Filter by storage rack
+        if (rackFilter !== 'all' && medicine.rack !== rackFilter) return false;
 
-        // Dosage Form Filter
-        if (dosageFilter !== 'all' && med.dosageForm !== dosageFilter) return false;
+        // Step 4: Filter by dosage form (tablet, capsule, etc.)
+        if (dosageFilter !== 'all' && medicine.dosageForm !== dosageFilter) return false;
 
         return true;
       })
-      .sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+      .sort((firstMedicine, secondMedicine) => {
+        let valueA = firstMedicine[sortField];
+        let valueB = secondMedicine[sortField];
 
         if (sortField === 'quantity' || sortField === 'price') {
-          valA = Number(valA);
-          valB = Number(valB);
+          valueA = Number(valueA);
+          valueB = Number(valueB);
         } else {
-          valA = (valA || '').toString().toLowerCase();
-          valB = (valB || '').toString().toLowerCase();
+          valueA = (valueA || '').toString().toLowerCase();
+          valueB = (valueB || '').toString().toLowerCase();
         }
 
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
+        if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
   }, [medicines, searchTerm, statusFilter, rackFilter, dosageFilter, sortField, sortOrder]);

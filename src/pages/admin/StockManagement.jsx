@@ -26,10 +26,12 @@ export function StockManagement({ setCurrentRoute }) {
   const [editingThresholdMed, setEditingThresholdMed] = useState(null);
   const [tempThreshold, setTempThreshold] = useState(10);
 
-  const filteredMedicines = medicines.filter((m) => {
-    if (activeTab === 'available') return m.quantity > (m.lowStockThreshold || 10);
-    if (activeTab === 'low') return m.quantity <= (m.lowStockThreshold || 10) && m.quantity > 0;
-    if (activeTab === 'out') return m.quantity === 0;
+  // Filter medicines by tab: all, available, low stock, or out of stock
+  const filteredMedicines = medicines.filter((medicine) => {
+    const lowStockLimit = medicine.lowStockThreshold || 10;
+    if (activeTab === 'available') return medicine.quantity > lowStockLimit;
+    if (activeTab === 'low') return medicine.quantity <= lowStockLimit && medicine.quantity > 0;
+    if (activeTab === 'out') return medicine.quantity === 0;
     return true;
   });
 

@@ -46,33 +46,33 @@ export function WorkerActivity({ setCurrentRoute }) {
 
   // Filter sales recorded by this user
   const userSales = useMemo(() => {
-    return sales.filter((s) => isMatchUser(s?.recordedBy));
+    return sales.filter((sale) => isMatchUser(sale?.recordedBy));
   }, [sales, currentUser]);
 
   // Filter activities performed by this user
   const userActivities = useMemo(() => {
-    return activities.filter((a) => isMatchUser(a?.user || a?.performedBy));
+    return activities.filter((activity) => isMatchUser(activity?.user || activity?.performedBy));
   }, [activities, currentUser]);
 
   // Shift performance metrics
   const totalShiftRevenue = useMemo(() => {
-    return userSales.reduce((sum, s) => sum + (Number(s?.totalAmount) || 0), 0);
+    return userSales.reduce((sum, sale) => sum + (Number(sale?.totalAmount) || 0), 0);
   }, [userSales]);
 
   const totalShiftUnits = useMemo(() => {
-    return userSales.reduce((sum, s) => sum + (Number(s?.quantitySold) || 0), 0);
+    return userSales.reduce((sum, sale) => sum + (Number(sale?.quantitySold) || 0), 0);
   }, [userSales]);
 
   // Filtered sales matching search query
   const filteredSales = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    if (!term) return userSales;
-    return userSales.filter((s) => {
-      const med = (s?.medicineName || '').toLowerCase();
-      const cust = (s?.customerType || '').toLowerCase();
-      const rec = (s?.recordedBy || '').toLowerCase();
-      const notes = (s?.notes || '').toLowerCase();
-      return med.includes(term) || cust.includes(term) || rec.includes(term) || notes.includes(term);
+    const searchText = searchTerm.toLowerCase().trim();
+    if (!searchText) return userSales;
+    return userSales.filter((sale) => {
+      const medicineName = (sale?.medicineName || '').toLowerCase();
+      const customerType = (sale?.customerType || '').toLowerCase();
+      const recordedBy = (sale?.recordedBy || '').toLowerCase();
+      const saleNotes = (sale?.notes || '').toLowerCase();
+      return medicineName.includes(searchText) || customerType.includes(searchText) || recordedBy.includes(searchText) || saleNotes.includes(searchText);
     });
   }, [userSales, searchTerm]);
 
@@ -81,14 +81,14 @@ export function WorkerActivity({ setCurrentRoute }) {
 
   // Filtered activities matching search query
   const filteredActivities = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    if (!term) return activeActivitiesSource;
-    return activeActivitiesSource.filter((act) => {
-      const action = (act?.action || '').toLowerCase();
-      const target = (act?.medicine || act?.target || '').toLowerCase();
-      const user = (act?.user || act?.performedBy || '').toLowerCase();
-      const details = (act?.details || '').toLowerCase();
-      return action.includes(term) || target.includes(term) || user.includes(term) || details.includes(term);
+    const searchText = searchTerm.toLowerCase().trim();
+    if (!searchText) return activeActivitiesSource;
+    return activeActivitiesSource.filter((activity) => {
+      const action = (activity?.action || '').toLowerCase();
+      const target = (activity?.target || activity?.medicine || '').toLowerCase();
+      const user = (activity?.user || activity?.performedBy || '').toLowerCase();
+      const details = (activity?.details || '').toLowerCase();
+      return action.includes(searchText) || target.includes(searchText) || user.includes(searchText) || details.includes(searchText);
     });
   }, [activeActivitiesSource, searchTerm]);
 

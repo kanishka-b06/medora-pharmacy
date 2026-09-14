@@ -21,10 +21,10 @@ export function ExpiryRiskMonitor() {
 
   // Process medicines with expiry calculation
   const processedMedicines = useMemo(() => {
-    return medicines.map((med) => {
-      const risk = calculateExpiryRisk(med.expiryDate, settings.expiryWarningDays, settings.highRiskExpiryDays);
+    return medicines.map((medicine) => {
+      const risk = calculateExpiryRisk(medicine.expiryDate, settings.expiryWarningDays, settings.highRiskExpiryDays);
       return {
-        ...med,
+        ...medicine,
         risk
       };
     });
@@ -32,26 +32,26 @@ export function ExpiryRiskMonitor() {
 
   const filteredMedicines = useMemo(() => {
     return processedMedicines
-      .filter((med) => {
-        if (riskFilter === 'high_risk') return med.risk.status === 'high_risk' || med.risk.status === 'expired';
-        if (riskFilter === 'expiring_soon') return med.risk.status === 'expiring_soon';
-        if (riskFilter === 'safe') return med.risk.status === 'safe';
+      .filter((medicine) => {
+        if (riskFilter === 'high_risk') return medicine.risk.status === 'high_risk' || medicine.risk.status === 'expired';
+        if (riskFilter === 'expiring_soon') return medicine.risk.status === 'expiring_soon';
+        if (riskFilter === 'safe') return medicine.risk.status === 'safe';
         return true;
       })
-      .sort((a, b) => {
-        let valA = a.risk.daysRemaining;
-        let valB = b.risk.daysRemaining;
+      .sort((firstMedicine, secondMedicine) => {
+        let valueA = firstMedicine.risk.daysRemaining;
+        let valueB = secondMedicine.risk.daysRemaining;
 
         if (sortField === 'quantity') {
-          valA = a.quantity;
-          valB = b.quantity;
+          valueA = firstMedicine.quantity;
+          valueB = secondMedicine.quantity;
         } else if (sortField === 'name') {
-          valA = a.name.toLowerCase();
-          valB = b.name.toLowerCase();
+          valueA = firstMedicine.name.toLowerCase();
+          valueB = secondMedicine.name.toLowerCase();
         }
 
-        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
+        if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
   }, [processedMedicines, riskFilter, sortField, sortOrder]);

@@ -49,9 +49,10 @@ export function MedicineInfoPage({ setCurrentRoute, onSelectMedicineForAI }) {
     }
   };
 
-  const medicinesInSelectedRack = medicines.filter((m) => {
-    if (m.rack !== selectedRack) return false;
-    if (selectedShelf !== 'all' && m.shelf.toString() !== selectedShelf.toString()) return false;
+  // Filter medicines present in the selected physical storage rack and shelf
+  const medicinesInSelectedRack = medicines.filter((medicine) => {
+    if (medicine.rack !== selectedRack) return false;
+    if (selectedShelf !== 'all' && medicine.shelf.toString() !== selectedShelf.toString()) return false;
     return true;
   });
 

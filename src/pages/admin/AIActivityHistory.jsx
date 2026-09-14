@@ -18,22 +18,23 @@ export function AIActivityHistory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [decisionFilter, setDecisionFilter] = useState('all'); // all, Approved, Rejected, Ignored
 
-  const filteredSuggestions = aiSuggestions.filter((sug) => {
-    const term = searchTerm.toLowerCase().trim();
+  // Filter AI alternative suggestions matching search text and decision status
+  const filteredSuggestions = aiSuggestions.filter((suggestion) => {
+    const searchText = searchTerm.toLowerCase().trim();
     const matchesSearch =
-      !term ||
-      sug.requestedMedicineName.toLowerCase().includes(term) ||
-      sug.suggestedMedicineName.toLowerCase().includes(term) ||
-      sug.reviewedBy.toLowerCase().includes(term) ||
-      sug.matchReason.toLowerCase().includes(term);
+      !searchText ||
+      suggestion.requestedMedicineName.toLowerCase().includes(searchText) ||
+      suggestion.suggestedMedicineName.toLowerCase().includes(searchText) ||
+      suggestion.reviewedBy.toLowerCase().includes(searchText) ||
+      suggestion.matchReason.toLowerCase().includes(searchText);
 
     if (!matchesSearch) return false;
-    if (decisionFilter !== 'all' && sug.decision !== decisionFilter) return false;
+    if (decisionFilter !== 'all' && suggestion.decision !== decisionFilter) return false;
     return true;
   });
 
-  const approvedCount = aiSuggestions.filter((s) => s.decision === 'Approved').length;
-  const rejectedCount = aiSuggestions.filter((s) => s.decision === 'Rejected').length;
+  const approvedCount = aiSuggestions.filter((item) => item.decision === 'Approved').length;
+  const rejectedCount = aiSuggestions.filter((item) => item.decision === 'Rejected').length;
 
   return (
     <div className="space-y-6">

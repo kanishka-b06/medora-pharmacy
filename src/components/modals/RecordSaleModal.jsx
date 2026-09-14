@@ -17,7 +17,7 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
     if (preselectedMedicine) {
       setSelectedMedId(preselectedMedicine.id);
     } else if (medicines.length > 0 && !selectedMedId) {
-      const firstAvailable = medicines.find((m) => m.quantity > 0) || medicines[0];
+      const firstAvailable = medicines.find((medicine) => medicine.quantity > 0) || medicines[0];
       setSelectedMedId(firstAvailable.id);
     }
     setQuantitySold(1);

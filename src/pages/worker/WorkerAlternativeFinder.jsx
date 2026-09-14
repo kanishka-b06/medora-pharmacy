@@ -40,7 +40,8 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
     }
   }, [initialMedicineId]);
 
-  const requestedMedicine = medicines.find((m) => m.id === selectedMedId);
+  // Find requested medicine from current inventory
+  const requestedMedicine = medicines.find((medicine) => medicine.id === selectedMedId);
   const isAvailable = requestedMedicine && requestedMedicine.quantity > 0;
   const isOutOfStock = requestedMedicine && requestedMedicine.quantity === 0;
 
@@ -127,9 +128,9 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
               onChange={(e) => setSelectedMedId(e.target.value)}
               className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-300 bg-white font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500"
             >
-              {medicines.map((med) => (
-                <option key={med.id} value={med.id}>
-                  {med.name} ({med.activeIngredient} {med.strength}) — {med.quantity === 0 ? '🔴 [OUT OF STOCK]' : `🟢 [${med.quantity} in stock at Rack ${med.rack}]`}
+              {medicines.map((medicine) => (
+                <option key={medicine.id} value={medicine.id}>
+                  {medicine.name} ({medicine.activeIngredient} {medicine.strength}) — {medicine.quantity === 0 ? '🔴 [OUT OF STOCK]' : `🟢 [${medicine.quantity} in stock at Rack ${medicine.rack}]`}
                 </option>
               ))}
             </select>

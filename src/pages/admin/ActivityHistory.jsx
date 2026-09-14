@@ -7,19 +7,20 @@ export function ActivityHistory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
 
-  const filteredActivities = activities.filter((act) => {
-    const term = searchTerm.toLowerCase().trim();
-    const action = (act?.action || '').toLowerCase();
-    const medicine = (act?.medicine || act?.target || '').toLowerCase();
-    const user = (act?.user || act?.performedBy || '').toLowerCase();
-    const details = (act?.details || '').toLowerCase();
+  // Filter activities matching search text and action filter
+  const filteredActivities = activities.filter((activity) => {
+    const searchText = searchTerm.toLowerCase().trim();
+    const action = (activity?.action || '').toLowerCase();
+    const medicine = (activity?.medicine || activity?.target || '').toLowerCase();
+    const user = (activity?.user || activity?.performedBy || '').toLowerCase();
+    const details = (activity?.details || '').toLowerCase();
 
     const matchesSearch =
-      !term ||
-      action.includes(term) ||
-      medicine.includes(term) ||
-      user.includes(term) ||
-      details.includes(term);
+      !searchText ||
+      action.includes(searchText) ||
+      medicine.includes(searchText) ||
+      user.includes(searchText) ||
+      details.includes(searchText);
 
     if (!matchesSearch) return false;
     if (actionFilter !== 'all' && !action.includes(actionFilter.toLowerCase())) return false;
