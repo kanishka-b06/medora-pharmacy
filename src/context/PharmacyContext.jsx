@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   INITIAL_USERS,
   INITIAL_MEDICINES,
@@ -9,6 +9,20 @@ import {
   INITIAL_SETTINGS
 } from '../data/initialData';
 import { getStockStatus, calculateExpiryRisk } from '../services/aiMatchingEngine';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import {
+  mapMedicineToDb,
+  mapMedicineFromDb,
+  mapSaleToDb,
+  mapSaleFromDb,
+  mapOrderToDb,
+  mapOrderFromDb,
+  mapActivityToDb,
+  mapActivityFromDb,
+  mapAISuggestionToDb,
+  mapAISuggestionFromDb,
+  seedInitialDataIfEmpty
+} from '../lib/supabaseService';
 
 const PharmacyContext = createContext(null);
 
@@ -133,9 +147,110 @@ export function PharmacyProvider({ children }) {
     }
   });
 
-  const [toasts, setToasts] = useState([]);
+  const [isDbLoading, setIsDbLoading] = useState(isSupabaseConfigured);
+  const [dbError, setDbError] = useState(null);
 
-  // LocalStorage Synchronization
+  // Supabase Database Fetch & Initialization
+  const fetchSupabaseData = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setIsDbLoading(false);
+      return;
+    }
+
+    try {
+      setIsDbLoading(true);
+      setDbError(null);
+
+      // 1. Seed demo data safely if tables are empty
+      await seedInitialDataIfEmpty();
+
+      // 2. Fetch medicines
+      const { data: medsData, error: medsError } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (!medsError && medsData && medsData.length > 0) {
+        const mapped = medsData.map(mapMedicineFromDb);
+        setMedicines(mapped);
+      }
+
+      // 3. Fetch sales
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (!salesError && salesData) {
+        const mappedSales = salesData.map(mapSaleFromDb);
+        setSales(mappedSales);
+      }
+
+      // 4. Fetch orders
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('order_date', { ascending: false });
+
+      if (!ordersError && ordersData) {
+        const mappedOrders = ordersData.map(mapOrderFromDb);
+        setOrders(mappedOrders);
+      }
+
+      // 5. Fetch activities
+      const { data: actsData, error: actsError } = await supabase
+        .from('activities')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (!actsError && actsData) {
+        const mappedActs = actsData.map(mapActivityFromDb);
+        setActivities(mappedActs);
+      }
+
+      // 6. Fetch AI suggestions
+      const { data: sugsData, error: sugsError } = await supabase
+        .from('ai_suggestions')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (!sugsError && sugsData) {
+        const mappedSugs = sugsData.map(mapAISuggestionFromDb);
+        setAiSuggestions(mappedSugs);
+      }
+
+      // 7. Fetch Users
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('*');
+
+      if (!usersError && usersData && usersData.length > 0) {
+        const mappedUsers = usersData.map((u) => ({
+          id: u.id,
+          username: u.username,
+          name: u.name,
+          role: u.role,
+          email: u.email || `${u.username}@medora.local`,
+          status: u.status || 'active',
+          lastActive: u.last_active || 'Recent',
+          avatarColor: u.avatar_color || 'bg-teal-600',
+          roleTitle: u.role_title || (u.role === 'owner' ? 'Pharmacy Owner' : 'Pharmacy Staff Dispenser')
+        }));
+        setUsers(mappedUsers);
+      }
+    } catch (err) {
+      console.warn('[MEDORA] Supabase fetch issue, using local state:', err);
+      setDbError(err.message || 'Database connection error');
+    } finally {
+      setIsDbLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSupabaseData();
+  }, [fetchSupabaseData]);
+
+  // LocalStorage Fallback & Session Synchronization
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('medora_currentUser', JSON.stringify(currentUser));
@@ -203,6 +318,18 @@ export function PharmacyProvider({ children }) {
       timestamp: new Date().toISOString()
     };
     setActivities((prev) => [newActivity, ...prev]);
+
+    // Persist activity to Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('activities')
+        .insert([mapActivityToDb(newActivity)])
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase activity logging error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase activity logging exception:', err));
+    }
+
     return newActivity;
   };
 
@@ -390,6 +517,17 @@ export function PharmacyProvider({ children }) {
 
     setMedicines((prev) => [newMed, ...prev]);
 
+    // Persist to Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('medicines')
+        .insert([mapMedicineToDb(newMed)])
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase insert medicine error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase insert medicine exception:', err));
+    }
+
     logActivity(
       'Medicine Added',
       newMed.name,
@@ -432,6 +570,18 @@ export function PharmacyProvider({ children }) {
     );
 
     if (updatedRecord) {
+      // Persist to Supabase
+      if (isSupabaseConfigured && supabase) {
+        supabase
+          .from('medicines')
+          .update(mapMedicineToDb(updatedRecord))
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.warn('[MEDORA] Supabase update medicine error:', error);
+          })
+          .catch((err) => console.warn('[MEDORA] Supabase update medicine exception:', err));
+      }
+
       logActivity(
         'Medicine Updated',
         updatedRecord.name,
@@ -453,6 +603,18 @@ export function PharmacyProvider({ children }) {
     if (!target) return false;
 
     setMedicines((prev) => prev.filter((m) => m.id !== id));
+
+    // Delete in Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('medicines')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase delete medicine error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase delete medicine exception:', err));
+    }
 
     logActivity('Medicine Deleted', target.name, `Removed from inventory (Rack ${target.rack}, Shelf ${target.shelf}).`);
 
@@ -482,6 +644,18 @@ export function PharmacyProvider({ children }) {
         return med;
       })
     );
+
+    // Update quantity in Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('medicines')
+        .update({ quantity: targetQty })
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase stock correction error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase stock correction exception:', err));
+    }
 
     logActivity('Stock Corrected', medName, `Stock adjusted from ${oldQty} → ${targetQty} units (${reason}).`);
 
@@ -573,6 +747,31 @@ export function PharmacyProvider({ children }) {
 
     setSales((prev) => [newSale, ...prev]);
 
+    // Persist Dispensing Transaction & Stock Deduction to Supabase
+    if (isSupabaseConfigured && supabase) {
+      // 1. Update medicine quantity in database
+      supabase
+        .from('medicines')
+        .update({
+          quantity: remainingStock,
+          order_status: remainingStock === 0 ? 'Order Required' : targetMed.orderStatus
+        })
+        .eq('id', medicineId)
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase stock deduction error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase stock deduction exception:', err));
+
+      // 2. Insert sale record in database
+      supabase
+        .from('sales')
+        .insert([mapSaleToDb(newSale)])
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase insert sale error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase insert sale exception:', err));
+    }
+
     // Status: When stock reaches 0, status must become "Out of Stock"
     let statusNotice = '';
     if (remainingStock === 0) {
@@ -616,6 +815,17 @@ export function PharmacyProvider({ children }) {
 
     setOrders((prev) => [newOrder, ...prev]);
 
+    // Persist order to Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('orders')
+        .insert([mapOrderToDb(newOrder)])
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase insert order error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase insert order exception:', err));
+    }
+
     // Update medicine expected restock & order status
     if (orderData.medicineId) {
       setMedicines((prev) =>
@@ -630,6 +840,17 @@ export function PharmacyProvider({ children }) {
           return med;
         })
       );
+
+      if (isSupabaseConfigured && supabase) {
+        supabase
+          .from('medicines')
+          .update({
+            order_status: newOrder.status,
+            expected_restock_date: newOrder.expectedArrivalDate || null
+          })
+          .eq('id', orderData.medicineId)
+          .catch((err) => console.warn('[MEDORA] Supabase medicine order status update exception:', err));
+      }
     }
 
     logActivity(
@@ -666,6 +887,18 @@ export function PharmacyProvider({ children }) {
       })
     );
 
+    // Sync order update to Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('orders')
+        .update({
+          status: newStatus,
+          expected_arrival_date: expectedArrivalDate || null
+        })
+        .eq('id', orderId)
+        .catch((err) => console.warn('[MEDORA] Supabase update order status exception:', err));
+    }
+
     if (affectedMedId) {
       setMedicines((prev) =>
         prev.map((med) => {
@@ -679,6 +912,17 @@ export function PharmacyProvider({ children }) {
           return med;
         })
       );
+
+      if (isSupabaseConfigured && supabase) {
+        supabase
+          .from('medicines')
+          .update({
+            order_status: newStatus,
+            expected_restock_date: expectedArrivalDate || null
+          })
+          .eq('id', affectedMedId)
+          .catch((err) => console.warn('[MEDORA] Supabase update medicine restock date exception:', err));
+      }
     }
 
     logActivity('Order Status Updated', affectedMedName || orderId, `Order status set to "${newStatus}".`);
@@ -705,6 +949,7 @@ export function PharmacyProvider({ children }) {
     let medName = '';
     let prevQty = 0;
     let newTotalQty = 0;
+    let updatedMedObj = null;
 
     setMedicines((prev) =>
       prev.map((med) => {
@@ -712,7 +957,7 @@ export function PharmacyProvider({ children }) {
           medName = med.name;
           prevQty = med.quantity;
           newTotalQty = prevQty + addQty;
-          return {
+          updatedMedObj = {
             ...med,
             quantity: newTotalQty,
             batchNumber: newBatchNumber ? newBatchNumber.toUpperCase().trim() : med.batchNumber,
@@ -723,6 +968,7 @@ export function PharmacyProvider({ children }) {
             orderStatus: 'None',
             expectedRestockDate: ''
           };
+          return updatedMedObj;
         }
         return med;
       })
@@ -733,6 +979,9 @@ export function PharmacyProvider({ children }) {
       setOrders((prev) =>
         prev.map((ord) => (ord.id === orderId ? { ...ord, status: 'Arrived' } : ord))
       );
+      if (isSupabaseConfigured && supabase) {
+        supabase.from('orders').update({ status: 'Arrived' }).eq('id', orderId).catch(() => {});
+      }
     } else {
       setOrders((prev) =>
         prev.map((ord) => {
@@ -742,6 +991,18 @@ export function PharmacyProvider({ children }) {
           return ord;
         })
       );
+    }
+
+    // Sync medicine restock quantity to Supabase
+    if (isSupabaseConfigured && supabase && updatedMedObj) {
+      supabase
+        .from('medicines')
+        .update(mapMedicineToDb(updatedMedObj))
+        .eq('id', medicineId)
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase restock medicine error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase restock medicine exception:', err));
     }
 
     logActivity(
@@ -777,6 +1038,17 @@ export function PharmacyProvider({ children }) {
     };
 
     setAiSuggestions((prev) => [newRecord, ...prev]);
+
+    // Persist to Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('ai_suggestions')
+        .insert([mapAISuggestionToDb(newRecord)])
+        .then(({ error }) => {
+          if (error) console.warn('[MEDORA] Supabase insert AI suggestion error:', error);
+        })
+        .catch((err) => console.warn('[MEDORA] Supabase insert AI suggestion exception:', err));
+    }
 
     logActivity(
       `AI Alternative ${decision}`,
@@ -986,7 +1258,12 @@ export function PharmacyProvider({ children }) {
     // Toasts & logging
     addToast,
     removeToast,
-    logActivity
+    logActivity,
+    // Supabase state
+    isDbLoading,
+    dbError,
+    fetchSupabaseData,
+    isSupabaseConnected: isSupabaseConfigured && !dbError
   };
 
   return <PharmacyContext.Provider value={value}>{children}</PharmacyContext.Provider>;
