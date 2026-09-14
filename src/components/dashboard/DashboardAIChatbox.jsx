@@ -117,23 +117,65 @@ export function DashboardAIChatbox({ setCurrentRoute }) {
       return `Found **${expiring.length} batches nearing expiry threshold**:\n\n${list}\n\nPriority: Dispense soonest-expiring batches first (FEFO).`;
     }
 
-    // 5. General stats/overview inquiry
+    // 5. Available medicines inquiry (e.g. "what all medicines are available", "which medicines are in stock", "available medicines")
+    if (
+      q.includes('available') ||
+      q.includes('in stock') ||
+      q.includes('which medicine') ||
+      q.includes('which are available') ||
+      (q.includes('medicines') && (q.includes('what') || q.includes('all') || q.includes('list') || q.includes('show') || q.includes('have')))
+    ) {
+      const availableMeds = medicines.filter((m) => m.quantity > 0);
+      if (availableMeds.length === 0) {
+        return "⚠️ There are currently no medicines in stock in the inventory.";
+      }
+      const list = availableMeds
+        .slice(0, 6)
+        .map((m) => `• **${m.name}** (${m.activeIngredient} ${m.strength}) — **${m.quantity} units** (Rack ${m.rack}/Shelf ${m.shelf})`)
+        .join('\n');
+      const moreCount = availableMeds.length > 6 ? `\n...and **${availableMeds.length - 6} more** in the database.` : '';
+      return `📦 **${availableMeds.length} Medicines Available in Stock**:\n\n${list}${moreCount}\n\n💡 *Tip: You can ask for details or location of any medicine (e.g. "Where is Calpol?" or "Tell me about Dolo").*`;
+    }
+
+    // 6. General stats/overview inquiry
     if (q.includes('total') || q.includes('inventory') || q.includes('summary') || q.includes('overview') || q.includes('status')) {
       return `📊 **Live Pharmacy Summary**:\n• Total SKUs: **${stats.totalMedicines}**\n• Total Units: **${stats.totalStock}**\n• Healthy Stock: **${stats.availableCount}**\n• Low Stock: **${stats.lowStockCount}**\n• Out of Stock: **${stats.outOfStockCount}**\n• Pending Orders: **${stats.pendingOrdersCount}**`;
     }
 
-    // 6. Specific medicine search
+    // 7. Rack / location / shelf lookup (e.g. "where is", "rack", "shelf", "location")
+    if (q.includes('where') || q.includes('location') || q.includes('rack') || q.includes('shelf')) {
+      const targetMed = medicines.find(
+        (m) =>
+          q.includes(m.name.toLowerCase()) ||
+          q.includes(m.activeIngredient.toLowerCase()) ||
+          (m.brandName && q.includes(m.brandName.toLowerCase()))
+      );
+      if (targetMed) {
+        return `📍 **Storage Location for ${targetMed.name}**:\n• **Rack ${targetMed.rack}, Shelf ${targetMed.shelf}**\n• Available Stock: **${targetMed.quantity} units**\n• Batch: \`${targetMed.batchNumber}\` (Expires ${new Date(targetMed.expiryDate).toLocaleDateString()})`;
+      }
+    }
+
+    // 8. Specific medicine lookup or question
     const foundMed = medicines.find(
       (m) =>
         q.includes(m.name.toLowerCase()) ||
-        q.includes(m.activeIngredient.toLowerCase())
+        q.includes(m.activeIngredient.toLowerCase()) ||
+        (m.brandName && q.includes(m.brandName.toLowerCase()))
     );
     if (foundMed) {
-      return `💊 **${foundMed.name}** (${foundMed.activeIngredient} ${foundMed.strength})\n• Status: **${foundMed.quantity === 0 ? 'Out of Stock' : `${foundMed.quantity} Units Available`}**\n• Storage: **Rack ${foundMed.rack}, Shelf ${foundMed.shelf}**\n• Price: **${settings.currencySymbol}${Number(foundMed.price).toFixed(2)}**\n• Batch: \`${foundMed.batchNumber}\` (Expires ${new Date(foundMed.expiryDate).toLocaleDateString()})`;
+      const details = [];
+      details.push(`💊 **${foundMed.name}** (${foundMed.activeIngredient} ${foundMed.strength})`);
+      details.push(`• Stock: **${foundMed.quantity === 0 ? 'Out of Stock' : `${foundMed.quantity} Units Available`}**`);
+      details.push(`• Location: **Rack ${foundMed.rack}, Shelf ${foundMed.shelf}**`);
+      details.push(`• Price: **${settings.currencySymbol}${Number(foundMed.price).toFixed(2)}**`);
+      if (foundMed.usedFor) details.push(`• Uses: ${foundMed.usedFor}`);
+      if (foundMed.whoShouldUse) details.push(`• Target Group: ${foundMed.whoShouldUse}`);
+      details.push(`• Batch: \`${foundMed.batchNumber}\` (Expires ${new Date(foundMed.expiryDate).toLocaleDateString()})`);
+      return details.join('\n');
     }
 
     // Default intelligent fallback
-    return `I can assist with inventory lookups! You can ask:\n• *"Which medicines are out of stock?"*\n• *"What are alternatives for Crocin or Paracetamol?"*\n• *"Show low stock items"*\n• *"Give me an inventory overview"*`;
+    return `I can assist with inventory lookups! You can ask:\n• *"What all medicines are available?"*\n• *"Which medicines are out of stock?"*\n• *"What are alternatives for Crocin or Paracetamol?"*\n• *"Show low stock items"*\n• *"Give me an inventory overview"*`;
   };
 
   const handleSendMessage = (textToSend) => {
