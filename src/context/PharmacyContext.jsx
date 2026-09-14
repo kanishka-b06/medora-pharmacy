@@ -44,7 +44,18 @@ export function PharmacyProvider({ children }) {
   const [medicines, setMedicines] = useState(() => {
     try {
       const saved = localStorage.getItem('medora_medicines') || localStorage.getItem('pharmassist_medicines');
-      return saved ? JSON.parse(saved) : INITIAL_MEDICINES;
+      const loaded = saved ? JSON.parse(saved) : INITIAL_MEDICINES;
+      return (Array.isArray(loaded) ? loaded : INITIAL_MEDICINES).map((med) => {
+        const init = INITIAL_MEDICINES.find((im) => im.id === med.id) || {};
+        return {
+          ...init,
+          ...med,
+          power: med.power || init.power || med.strength || 'Standard Power',
+          usedFor: med.usedFor || init.usedFor || 'Therapeutic treatment for diagnosed condition',
+          whoShouldUse: med.whoShouldUse || init.whoShouldUse || 'Adults & adolescents upon healthcare consultation',
+          dosageInstructions: med.dosageInstructions || init.dosageInstructions || 'As directed by healthcare provider'
+        };
+      });
     } catch {
       return INITIAL_MEDICINES;
     }

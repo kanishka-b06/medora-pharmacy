@@ -14,7 +14,11 @@ import {
   Truck, 
   Building,
   Info,
-  Clock
+  Clock,
+  Zap,
+  CheckCircle2,
+  Users,
+  AlertTriangle
 } from 'lucide-react';
 
 export function MedicineDetailsModal({ 
@@ -29,7 +33,7 @@ export function MedicineDetailsModal({
   const { currentUser, settings } = usePharmacy();
   if (!medicine) return null;
 
-  const isAdmin = currentUser?.role === 'supervisor' || currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'supervisor' || currentUser?.role === 'admin' || currentUser?.role === 'owner';
   const expiryRisk = calculateExpiryRisk(medicine.expiryDate, settings.expiryWarningDays, settings.highRiskExpiryDays);
   const isOutOfStock = medicine.quantity === 0;
 
@@ -38,8 +42,8 @@ export function MedicineDetailsModal({
       isOpen={isOpen}
       onClose={onClose}
       title={medicine.name}
-      subtitle={`${medicine.activeIngredient} • ${medicine.strength}`}
-      maxWidth="max-w-xl"
+      subtitle={`${medicine.brandName ? `${medicine.brandName} • ` : ''}${medicine.activeIngredient} • ${medicine.strength || medicine.power}`}
+      maxWidth="max-w-2xl"
     >
       <div className="space-y-5">
         {/* Top Highlight: Location & Stock Status */}
@@ -54,28 +58,77 @@ export function MedicineDetailsModal({
           </div>
         </div>
 
-        {/* Out of Stock Notice & Restock timeline */}
+        {/* Prominent Out of Stock Notice with AI Alternative Action */}
         {isOutOfStock && (
-          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-xs text-rose-900">
-            <div className="p-2 bg-rose-100 text-rose-700 rounded-lg">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div className="flex-1">
-              <h5 className="font-bold text-rose-950">Medicine Currently Unavailable in Store</h5>
-              {medicine.expectedRestockDate ? (
-                <p className="text-rose-800 mt-0.5">
-                  Expected Restock Arrival: <strong>{new Date(medicine.expectedRestockDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong> ({medicine.orderStatus})
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200/90 space-y-3">
+            <div className="flex items-start gap-3 text-xs text-rose-900">
+              <div className="p-2 bg-rose-100 text-rose-700 rounded-xl mt-0.5">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <h5 className="font-extrabold text-rose-950 text-sm">Medicine Currently Out of Stock</h5>
+                <p className="text-rose-800 mt-0.5 text-xs leading-relaxed">
+                  This medicine is not on the shelf. You can scan our inventory using the AI matching engine to suggest safe generic or therapeutic substitutes.
                 </p>
-              ) : (
-                <p className="text-rose-800 mt-0.5">
-                  No pending restock order recorded yet.
-                </p>
-              )}
+                {medicine.expectedRestockDate && (
+                  <p className="text-rose-700 text-[11px] font-semibold mt-1">
+                    Expected Restock: <strong>{new Date(medicine.expectedRestockDate).toLocaleDateString()}</strong> ({medicine.orderStatus})
+                  </p>
+                )}
+              </div>
             </div>
+
+            <button
+              onClick={() => {
+                onClose();
+                onOpenAlternatives(medicine);
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs shadow-md shadow-teal-600/20 transition-all animate-pulse-subtle"
+            >
+              <Sparkles className="w-4 h-4 text-teal-200" />
+              <span>Find In-Stock Alternatives with AI</span>
+            </button>
           </div>
         )}
 
-        {/* Core Attributes Grid */}
+        {/* CLINICAL USAGE INFORMATION SECTION */}
+        <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-200/90 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-teal-600" />
+              <span>Clinical & Dispensing Guidance</span>
+            </h4>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-teal-100 text-teal-800">
+              <Zap className="w-3 h-3 text-teal-600" />
+              <span>Power: {medicine.power || medicine.strength}</span>
+            </span>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            <div>
+              <span className="font-extrabold text-teal-900 block mb-0.5">🎯 What It Is Used For (Indications):</span>
+              <p className="text-slate-700 leading-relaxed bg-white p-2.5 rounded-xl border border-slate-200/70">
+                {medicine.usedFor || 'General therapeutic pain relief and symptom reduction.'}
+              </p>
+            </div>
+
+            <div>
+              <span className="font-extrabold text-slate-900 block mb-0.5">👥 Who Should Use It (Target Patient & Warnings):</span>
+              <p className="text-slate-700 leading-relaxed bg-white p-2.5 rounded-xl border border-slate-200/70">
+                {medicine.whoShouldUse || 'Adults and adolescents. Verify prescription or consult pharmacist before dispensing.'}
+              </p>
+            </div>
+
+            <div>
+              <span className="font-extrabold text-slate-900 block mb-0.5">🕒 Dosage & Administration:</span>
+              <p className="text-slate-600 leading-relaxed bg-white p-2.5 rounded-xl border border-slate-200/70">
+                {medicine.dosageInstructions || 'Take according to doctor prescription or standardized packet leaflet.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Core Operational Attributes Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
             <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Dosage Form</span>

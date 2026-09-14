@@ -104,6 +104,8 @@ export function App() {
             onSelectMedicineForAI={(m) => setSelectedAIMedicineId(m.id)}
           />
         );
+      case 'worker-ai-activity':
+        return <AIActivityHistory />;
       case 'worker-activity':
         return <WorkerActivity setCurrentRoute={setCurrentRoute} />;
 

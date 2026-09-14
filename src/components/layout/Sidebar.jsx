@@ -26,7 +26,6 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
   const supervisorNavItems = [
     { id: 'admin-dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'admin-inventory', label: 'Medicine Inventory', icon: Package, badge: stats.totalMedicines },
-    { id: 'admin-search', label: 'Medicine Search', icon: Search },
     { 
       id: 'admin-stock', 
       label: 'Stock Management', 
@@ -48,7 +47,6 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
       badge: stats.totalExpiringRisk > 0 ? `${stats.totalExpiringRisk}` : null,
       badgeColor: 'bg-rose-100 text-rose-800'
     },
-    { id: 'admin-ai-activity', label: 'AI Alternative Activity', icon: Sparkles },
     { id: 'admin-history', label: 'Reports / History', icon: History },
     { id: 'admin-users', label: 'Staff Management', icon: UserCheck },
     { id: 'admin-settings', label: 'Settings', icon: Settings }
@@ -64,6 +62,7 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
       badge: 'AI Assisted',
       badgeColor: 'bg-teal-100 text-teal-800'
     },
+    { id: 'worker-ai-activity', label: 'AI Suggestion Activity', icon: Sparkles },
     { id: 'worker-info', label: 'Medicine Information', icon: Layers },
     { id: 'worker-activity', label: 'My Activity', icon: History }
   ];

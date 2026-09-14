@@ -364,17 +364,17 @@ export function AdminDashboard({ setCurrentRoute }) {
           {/* Quick Management Shortcuts */}
           <div className="bg-gradient-to-br from-white via-[#f0fdf9] to-[#dffbfc]/40 text-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-teal-200/80 space-y-3">
             <h4 className="text-sm font-extrabold flex items-center gap-2 text-teal-800">
-              <Sparkles className="w-4 h-4 text-teal-600" />
-              <span>AI Alternative Assistant</span>
+              <Package className="w-4 h-4 text-teal-600" />
+              <span>Inventory & Restock Controls</span>
             </h4>
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              When medicines are out of stock, staff can scan the local pharmacy inventory for verified generic and therapeutic equivalents.
+              Monitor active inventory health across all racks, evaluate low stock alerts, and trigger supplier purchase orders.
             </p>
             <button
-              onClick={() => setCurrentRoute('admin-ai-activity')}
+              onClick={() => setCurrentRoute('admin-stock')}
               className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-colors shadow-sm shadow-teal-600/20"
             >
-              <span>Review AI Suggestion Activity</span>
+              <span>Manage Stock & Reorders</span>
               <ArrowUpRight className="w-4 h-4" />
             </button>
           </div>
