@@ -9,22 +9,27 @@ export function ActivityHistory() {
 
   const filteredActivities = activities.filter((act) => {
     const term = searchTerm.toLowerCase().trim();
+    const action = (act?.action || '').toLowerCase();
+    const medicine = (act?.medicine || act?.target || '').toLowerCase();
+    const user = (act?.user || act?.performedBy || '').toLowerCase();
+    const details = (act?.details || '').toLowerCase();
+
     const matchesSearch =
       !term ||
-      act.action.toLowerCase().includes(term) ||
-      act.medicine.toLowerCase().includes(term) ||
-      act.user.toLowerCase().includes(term) ||
-      act.details.toLowerCase().includes(term);
+      action.includes(term) ||
+      medicine.includes(term) ||
+      user.includes(term) ||
+      details.includes(term);
 
     if (!matchesSearch) return false;
-    if (actionFilter !== 'all' && !act.action.toLowerCase().includes(actionFilter.toLowerCase())) return false;
+    if (actionFilter !== 'all' && !action.includes(actionFilter.toLowerCase())) return false;
     return true;
   });
 
   const handleExportCSV = () => {
     const headers = ['Timestamp,User,Role,Action,Medicine,Details'];
     const rows = filteredActivities.map(a => 
-      `"${a.timestamp}","${a.user}","${a.role}","${a.action}","${a.medicine}","${a.details.replace(/"/g, '""')}"`
+      `"${a?.timestamp || ''}","${(a?.user || a?.performedBy || 'System')}","${a?.role || 'staff'}","${a?.action || ''}","${(a?.medicine || a?.target || '—')}","${(a?.details || '').replace(/"/g, '""')}"`
     );
     const blob = new Blob([[...headers, ...rows].join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -119,7 +124,7 @@ export function ActivityHistory() {
                     </td>
 
                     <td className="px-4 py-3.5 whitespace-nowrap font-medium text-slate-800">
-                      {act.user}
+                      {act.user || act.performedBy || 'System'}
                     </td>
 
                     <td className="px-4 py-3.5 whitespace-nowrap">
@@ -129,7 +134,7 @@ export function ActivityHistory() {
                     </td>
 
                     <td className="px-4 py-3.5 font-bold text-teal-800">
-                      {act.medicine}
+                      {act.medicine || act.target || '—'}
                     </td>
 
                     <td className="px-4 py-3.5 text-slate-600 leading-relaxed text-xs">

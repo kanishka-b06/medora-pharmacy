@@ -80,7 +80,16 @@ export function PharmacyProvider({ children }) {
   const [activities, setActivities] = useState(() => {
     try {
       const saved = localStorage.getItem('medora_activities') || localStorage.getItem('pharmassist_activities');
-      return saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
+      const loaded = saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
+      return (Array.isArray(loaded) ? loaded : INITIAL_ACTIVITIES).map((act) => ({
+        ...act,
+        user: act.user || act.performedBy || 'System',
+        performedBy: act.performedBy || act.user || 'System',
+        medicine: act.medicine || act.target || '—',
+        target: act.target || act.medicine || '—',
+        details: act.details || '',
+        action: act.action || 'Activity'
+      }));
     } catch {
       return INITIAL_ACTIVITIES;
     }
@@ -173,10 +182,13 @@ export function PharmacyProvider({ children }) {
     const userString = performedBy || (currentUser ? `${currentUser.name} (${currentUser.username})` : 'System');
     const newActivity = {
       id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-      action,
-      target,
-      details,
+      action: action || 'General Activity',
+      target: target || 'Inventory',
+      medicine: target || 'Inventory',
+      details: details || '',
       performedBy: userString,
+      user: userString,
+      role: currentUser?.role || 'staff',
       timestamp: new Date().toISOString()
     };
     setActivities((prev) => [newActivity, ...prev]);

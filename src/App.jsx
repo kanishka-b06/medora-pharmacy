@@ -3,6 +3,7 @@ import { usePharmacy } from './context/PharmacyContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RoleBasedLayout } from './components/layout/RoleBasedLayout';
 import { ToastContainer } from './components/common/Toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -104,7 +105,7 @@ export function App() {
           />
         );
       case 'worker-activity':
-        return <WorkerActivity />;
+        return <WorkerActivity setCurrentRoute={setCurrentRoute} />;
 
       default:
         if (currentUser.role === 'supervisor' || currentUser.role === 'admin' || currentUser.role === 'owner') {
@@ -123,7 +124,9 @@ export function App() {
   return (
     <>
       <RoleBasedLayout currentRoute={currentRoute} setCurrentRoute={setCurrentRoute}>
-        {renderCurrentPage()}
+        <ErrorBoundary key={currentRoute}>
+          {renderCurrentPage()}
+        </ErrorBoundary>
       </RoleBasedLayout>
       <ToastContainer />
     </>
