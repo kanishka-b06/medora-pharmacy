@@ -258,19 +258,20 @@ export function WorkerActivity({ setCurrentRoute }) {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="px-5 py-3.5">Time</th>
-                  <th className="px-5 py-3.5">Medicine</th>
-                  <th className="px-5 py-3.5">Quantity Issued</th>
-                  <th className="px-5 py-3.5">Stock Shift</th>
-                  <th className="px-5 py-3.5">Total Amount</th>
-                  <th className="px-5 py-3.5">Customer Type</th>
+                  <th className="px-4 py-3.5">Time & Date</th>
+                  <th className="px-4 py-3.5">Medicine</th>
+                  <th className="px-4 py-3.5">Quantity Given</th>
+                  <th className="px-4 py-3.5">Remaining Stock</th>
+                  <th className="px-4 py-3.5">Type</th>
+                  <th className="px-4 py-3.5">Worker</th>
+                  <th className="px-4 py-3.5">Total</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredSales.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="p-12 text-center text-slate-500">
+                    <td colSpan="7" className="p-12 text-center text-slate-500">
                       <ShoppingCart className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                       <p className="font-bold text-slate-700 text-sm">No sales recorded during this shift yet</p>
                       <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
@@ -290,44 +291,48 @@ export function WorkerActivity({ setCurrentRoute }) {
                 ) : (
                   filteredSales.map((sale) => (
                     <tr key={sale.id || sale.timestamp} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-5 py-3.5 whitespace-nowrap text-slate-500">
+                      <td className="px-4 py-3.5 whitespace-nowrap text-slate-500">
                         <div className="font-semibold text-slate-800">
-                          {sale.timestamp ? new Date(sale.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
+                          {sale.time || (sale.timestamp ? new Date(sale.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent')}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {sale.timestamp ? new Date(sale.timestamp).toLocaleDateString() : ''}
+                          {sale.date || (sale.timestamp ? new Date(sale.timestamp).toLocaleDateString() : '')}
                         </div>
                       </td>
 
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3.5">
                         <div className="font-bold text-slate-900">{sale.medicineName}</div>
                         {sale.notes && (
                           <div className="text-[11px] text-slate-500 italic mt-0.5">{sale.notes}</div>
                         )}
                       </td>
 
-                      <td className="px-5 py-3.5">
+                      <td className="px-4 py-3.5">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
-                          {sale.quantitySold} units
+                          {sale.quantityGiven || sale.quantitySold} units
                         </span>
                       </td>
 
-                      <td className="px-5 py-3.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         <span className="text-slate-400 font-medium">{sale.previousStock}</span>
                         <span className="mx-1.5 text-slate-300">→</span>
                         <span className={`font-bold ${sale.remainingStock === 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-                          {sale.remainingStock} units
+                          {sale.remainingStock} units {sale.remainingStock === 0 ? '(Out of Stock)' : ''}
                         </span>
                       </td>
 
-                      <td className="px-5 py-3.5 font-bold text-slate-900">
+                      <td className="px-4 py-3.5">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 text-[11px] font-bold border border-teal-200">
+                          {sale.transactionType || sale.type || 'Dispense'}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3.5 text-slate-700 font-medium whitespace-nowrap">
+                        {sale.worker || sale.recordedBy || 'Staff'}
+                      </td>
+
+                      <td className="px-4 py-3.5 font-bold text-slate-900 whitespace-nowrap">
                         {currency}{Number(sale.totalAmount || 0).toFixed(2)}
-                      </td>
-
-                      <td className="px-5 py-3.5 text-slate-600">
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-medium">
-                          {sale.customerType || 'Walk-in'}
-                        </span>
                       </td>
                     </tr>
                   ))

@@ -39,7 +39,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
 
   const {
     onlyAvailable = true,
-    minScoreThreshold = 50,
+    minScoreThreshold = 40,
   } = options;
 
   const reqIngredientNorm = normalize(requestedMedicine.activeIngredient);
@@ -75,19 +75,19 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
       inStock: candidate.quantity > 0
     };
 
-    // Factor 1: Active Ingredient Match (Max 45 points)
+    // Factor 1: Active Ingredient Match (Max 50 points)
     if (reqIngredientNorm && candIngredientNorm) {
       if (reqIngredientNorm === candIngredientNorm) {
-        score += 45;
+        score += 50;
         matchFactors.ingredient = true;
-        reasons.push(`Identical active ingredient: "${candidate.activeIngredient}"`);
+        reasons.push('Same active ingredient');
       } else if (
         reqIngredientNorm.includes(candIngredientNorm) ||
         candIngredientNorm.includes(reqIngredientNorm)
       ) {
         score += 35;
         matchFactors.ingredient = true;
-        reasons.push(`Closely related active ingredient salt/form: "${candidate.activeIngredient}"`);
+        reasons.push(`Related active ingredient salt/form: "${candidate.activeIngredient}"`);
       }
     }
 
@@ -99,7 +99,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
       ) {
         score += 25;
         matchFactors.strength = true;
-        reasons.push(`Identical strength & dosage unit (${candidate.strength})`);
+        reasons.push('Same strength');
       } else if (reqStrengthObj.unit === candStrengthObj.unit) {
         // Different strength but same unit (e.g. 500mg vs 650mg)
         const ratio = Math.min(reqStrengthObj.value, candStrengthObj.value) / Math.max(reqStrengthObj.value, candStrengthObj.value);
@@ -110,7 +110,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
     } else if (normalize(candidate.strength) === normalize(requestedMedicine.strength)) {
       score += 25;
       matchFactors.strength = true;
-      reasons.push(`Matching strength specification (${candidate.strength})`);
+      reasons.push('Same strength');
     }
 
     // Factor 3: Dosage Form Match (Max 15 points)
@@ -118,7 +118,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
       if (reqDosageNorm === candDosageNorm) {
         score += 15;
         matchFactors.dosageForm = true;
-        reasons.push(`Identical dosage form: ${candidate.dosageForm}`);
+        reasons.push('Same dosage form');
       } else if (
         (reqDosageNorm.includes('tablet') && candDosageNorm.includes('capsule')) ||
         (reqDosageNorm.includes('capsule') && candDosageNorm.includes('tablet'))
@@ -128,28 +128,48 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
       }
     }
 
-    // Factor 4: Therapeutic Class & Indication (Max 15 points)
+    // Factor 4: Therapeutic Class & Indication (Max 30 points)
     if (reqClassNorm && candClassNorm) {
       if (reqClassNorm === candClassNorm) {
-        score += 15;
+        score += 30;
         matchFactors.therapeuticClass = true;
         reasons.push(`Same therapeutic category: ${candidate.therapeuticClass}`);
       } else if (
         reqClassNorm.includes(candClassNorm) ||
         candClassNorm.includes(reqClassNorm)
       ) {
-        score += 10;
+        score += 20;
         matchFactors.therapeuticClass = true;
         reasons.push(`Overlapping pharmacological action (${candidate.therapeuticClass})`);
       }
     }
 
-    // Bonus for high availability & stock buffer
-    if (candidate.quantity >= (candidate.lowStockThreshold || 10)) {
-      score += 5;
-      reasons.push(`Healthy in-store stock (${candidate.quantity} units available at Rack ${candidate.rack}, Shelf ${candidate.shelf})`);
+    // Availability factor: Candidate is in current inventory with positive quantity
+    score += 5;
+    reasons.push('Available in current inventory');
+
+    // Check if this candidate is an exact 3-factor strong match
+    const isStrongestMatch = matchFactors.ingredient && matchFactors.strength && matchFactors.dosageForm;
+
+    // Final clean matching reasons list
+    const finalReasons = [];
+    if (isStrongestMatch) {
+      finalReasons.push('Same active ingredient, strength, and dosage form.');
+      finalReasons.push('Available in current inventory');
+    } else if (matchFactors.ingredient) {
+      finalReasons.push('Same active ingredient');
+      if (matchFactors.strength) finalReasons.push('Same strength');
+      else finalReasons.push(`Alternative strength (${candidate.strength})`);
+      if (matchFactors.dosageForm) finalReasons.push('Same dosage form');
+      finalReasons.push('Available in current inventory');
     } else {
-      reasons.push(`Available in limited quantity (${candidate.quantity} units at Rack ${candidate.rack}, Shelf ${candidate.shelf})`);
+      // Different active ingredient: clearly state warnings and require verification
+      finalReasons.push('⚠ Different active ingredient');
+      finalReasons.push('⚠ Pharmacist verification required');
+      if (matchFactors.therapeuticClass) {
+        finalReasons.push(`Same therapeutic category: ${candidate.therapeuticClass}`);
+      }
+      finalReasons.push('Available in current inventory');
     }
 
     // Normalize final score to a maximum of 98% (never 100% to reinforce AI advisory nature)
@@ -162,21 +182,28 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
         candidate,
         score: finalScore,
         matchFactors,
-        reasons,
-        matchType: matchFactors.ingredient 
+        isStrongestMatch,
+        reasons: finalReasons,
+        matchType: isStrongestMatch
+          ? 'Strongest Match'
+          : matchFactors.ingredient
           ? (matchFactors.strength ? 'Exact Generic / Bio-Equivalent' : 'Same Ingredient (Different Strength)')
-          : 'Therapeutic Class Alternative',
+          : 'Different Active Ingredient',
         storageLocation: `Rack ${candidate.rack} → Shelf ${candidate.shelf}`,
-        disclaimer: 'Database similarity calculation only. Pharmacist verification mandatory before dispensing.'
+        disclaimer: matchFactors.ingredient
+          ? 'Database similarity calculation only. Pharmacist verification mandatory before dispensing.'
+          : 'Different active ingredient. Pharmacist verification strictly required.'
       });
     }
   }
 
-  // Sort by highest match score descending, then by available quantity
+  // Sort: Strongest 3-factor matches first, then same active ingredient, then highest score, then quantity
   potentialMatches.sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score;
-    }
+    if (a.isStrongestMatch && !b.isStrongestMatch) return -1;
+    if (!a.isStrongestMatch && b.isStrongestMatch) return 1;
+    if (a.matchFactors.ingredient && !b.matchFactors.ingredient) return -1;
+    if (!a.matchFactors.ingredient && b.matchFactors.ingredient) return 1;
+    if (b.score !== a.score) return b.score - a.score;
     return b.candidate.quantity - a.candidate.quantity;
   });
 

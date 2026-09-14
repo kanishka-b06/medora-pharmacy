@@ -49,6 +49,10 @@ export function RecordSalePage({ setCurrentRoute }) {
     if (isInvalidQty || !currentMedicine) {
       if (qty > currentStock) {
         setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+      } else if (quantitySold === '' || isNaN(qty)) {
+        setValidationError('Please enter a valid numeric quantity.');
+      } else if (qty <= 0) {
+        setValidationError('Quantity to dispense must be at least 1.');
       } else {
         setValidationError('Please enter a valid quantity.');
       }
@@ -58,6 +62,7 @@ export function RecordSalePage({ setCurrentRoute }) {
     const result = recordSale({
       medicineId: currentMedicine.id,
       quantitySold: qty,
+      quantityToGive: qty,
       customerType,
       notes
     });
@@ -90,7 +95,7 @@ export function RecordSalePage({ setCurrentRoute }) {
             <div className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-md">
               <CheckCircle className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-extrabold text-emerald-950">Sale Successfully Completed</h3>
+            <h3 className="text-xl font-extrabold text-emerald-950">Dispensed Successfully</h3>
             <p className="text-xs text-emerald-800">
               Stock for <strong>{completedSale.medicineName}</strong> updated from <strong>{completedSale.previousStock}</strong> → <strong>{completedSale.remainingStock} units</strong>.
             </p>
@@ -106,20 +111,34 @@ export function RecordSalePage({ setCurrentRoute }) {
 
             <div className="space-y-1.5 pt-1">
               <div className="flex justify-between font-bold text-slate-900">
-                <span>ITEM: {completedSale.medicineName}</span>
+                <span>Medicine: {completedSale.medicineName}</span>
                 <span>{settings.currencySymbol}{completedSale.totalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Quantity:</span>
-                <span>{completedSale.quantitySold} units @ {settings.currencySymbol}{completedSale.unitPrice.toFixed(2)}</span>
+                <span>Quantity given:</span>
+                <span className="font-semibold text-slate-900">{completedSale.quantityGiven || completedSale.quantitySold} units</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Customer Type:</span>
-                <span>{completedSale.customerType}</span>
+                <span>Remaining:</span>
+                <span className="font-semibold text-emerald-700">{completedSale.remainingStock} units</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>Dispensed By:</span>
-                <span>{completedSale.recordedBy}</span>
+                <span>Worker:</span>
+                <span className="font-medium text-slate-800">{completedSale.worker || completedSale.recordedBy}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Date:</span>
+                <span className="text-slate-800">{completedSale.date || new Date(completedSale.timestamp).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Time:</span>
+                <span className="text-slate-800">{completedSale.time || new Date(completedSale.timestamp).toLocaleTimeString()}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Type:</span>
+                <span className="font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  {completedSale.transactionType || completedSale.type || 'Dispense'}
+                </span>
               </div>
               <div className="flex justify-between text-slate-400 text-[10px] pt-2 border-t border-slate-200">
                 <span>Transaction Ref:</span>

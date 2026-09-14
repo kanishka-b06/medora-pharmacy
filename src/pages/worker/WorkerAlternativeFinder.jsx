@@ -258,9 +258,9 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                 <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mx-auto">
                   <HelpCircle className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-bold text-slate-800">No verified database match found.</h4>
+                <h4 className="text-base font-bold text-slate-800">No suitable alternative found in current inventory.</h4>
                 <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  The local pharmacy database does not currently hold an available generic equivalent with matching active ingredients or pharmacological properties.
+                  The local pharmacy inventory does not currently hold an available generic equivalent with matching active ingredients or pharmacological properties.
                 </p>
                 
                 {/* Original medicine restock info */}
@@ -299,13 +299,13 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                           <span className="px-3 py-1 rounded-xl bg-teal-600 text-white text-xs font-black shadow-sm">
                             Database Match Score: {score}%
                           </span>
-                          <span className="text-xs font-bold text-slate-700">
-                            {matchType}
+                          <span className={`text-xs font-bold ${match.isStrongestMatch ? 'text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-300' : matchFactors.ingredient ? 'text-slate-700' : 'text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300'}`}>
+                            {match.isStrongestMatch ? '★ Strongest Match' : matchType}
                           </span>
                         </div>
 
                         <span className="text-[11px] text-slate-400 italic">
-                          Database similarity/matching score (NOT medical safety)
+                          Calculated from active ingredient, strength, form & inventory factors
                         </span>
                       </div>
 
@@ -314,7 +314,7 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                         <div className="space-y-2">
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                              Possible Database Match
+                              {match.isStrongestMatch ? 'Top Available Match' : 'Available Inventory Match'}
                             </span>
                             <h4 className="text-lg font-extrabold text-slate-900">{candidate.name}</h4>
                             <div className="flex flex-wrap gap-2 text-xs font-medium mt-1">
@@ -334,7 +334,7 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                                 {matchFactors.dosageForm ? '✓ Same dosage form' : `Form: ${candidate.dosageForm}`}
                               </span>
                               <span>•</span>
-                              <span className="text-emerald-700 font-bold">✓ Currently available in inventory</span>
+                              <span className="text-emerald-700 font-bold">✓ Available in current inventory</span>
                             </div>
                           </div>
 
@@ -368,15 +368,15 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                         <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
                           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                           <div>
-                            <strong className="font-bold">Pharmacist Verification Required:</strong>
+                            <strong className="font-bold text-amber-950 text-xs uppercase tracking-wide">Pharmacist verification required</strong>
                             <p className="mt-0.5 text-[11px] text-amber-800 leading-relaxed">
-                              This medicine has a different active ingredient ({candidate.activeIngredient}) from the requested item ({requestedMedicine.activeIngredient}). It is offered as a therapeutic class option only. Do NOT substitute automatically — a qualified pharmacist must review and confirm clinical suitability.
+                              This medicine has a different active ingredient ({candidate.activeIngredient}) from requested item ({requestedMedicine.activeIngredient}). It is NOT automatically equivalent or recommended as a replacement. The human pharmacist must review and make the final decision.
                             </p>
                           </div>
                         </div>
                       )}
 
-                      {/* Why was this suggested? (Prompt #13 & #27) */}
+                      {/* Why was this suggested? */}
                       <div className="p-4 rounded-2xl bg-teal-50/60 border border-teal-200/80 space-y-2">
                         <div className="flex items-center gap-2 text-xs font-extrabold text-teal-950">
                           <Info className="w-4 h-4 text-teal-700" />
@@ -386,8 +386,14 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-teal-900">
                           {reasons.map((r, i) => (
                             <li key={i} className="flex items-start gap-1.5">
-                              <Check className="w-3.5 h-3.5 text-teal-600 flex-shrink-0 mt-0.5" />
-                              <span>{r}</span>
+                              {r.includes('⚠') || r.includes('Different active ingredient') || r.includes('Pharmacist verification') ? (
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              ) : (
+                                <Check className="w-3.5 h-3.5 text-teal-600 flex-shrink-0 mt-0.5" />
+                              )}
+                              <span className={r.includes('⚠') || r.includes('Pharmacist verification') ? 'font-semibold text-amber-900' : ''}>
+                                {r}
+                              </span>
                             </li>
                           ))}
                         </ul>

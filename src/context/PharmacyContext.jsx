@@ -468,78 +468,107 @@ export function PharmacyProvider({ children }) {
     });
   };
 
-  // Record Sale Action (Previous - Sold = Remaining)
+  // Record Dispense / Sale Action (remainingStock = availableStock - quantityDispensed)
   const recordSale = (saleData) => {
-    const { medicineId, quantitySold, customerType = 'Walk-in Customer', notes = '' } = saleData;
-    const qtySold = parseInt(quantitySold, 10);
+    const { medicineId, quantitySold, quantityToGive, customerType = 'Walk-in Customer', notes = '' } = saleData;
+    const rawQty = quantityToGive !== undefined ? quantityToGive : quantitySold;
+    const qtyDispensed = parseInt(rawQty, 10);
 
     const targetMed = medicines.find((m) => m.id === medicineId);
     if (!targetMed) {
-      addToast({ type: 'error', title: 'Sale Failed', message: 'Medicine record not found.' });
-      return { success: false, message: 'Medicine not found' };
+      addToast({ type: 'error', title: 'Dispense Failed', message: 'Medicine record not found.' });
+      return { success: false, message: 'Medicine record not found.' };
     }
 
-    if (qtySold <= 0) {
-      addToast({ type: 'error', title: 'Invalid Quantity', message: 'Sold quantity must be greater than 0.' });
-      return { success: false, message: 'Quantity must be > 0' };
+    // Validation 1: Reject 0, negative numbers, empty, or non-numeric values
+    if (rawQty === '' || rawQty === null || rawQty === undefined || isNaN(qtyDispensed) || qtyDispensed <= 0) {
+      const errMsg = 'Invalid quantity. Please enter a valid positive number greater than 0.';
+      addToast({ type: 'error', title: 'Invalid Quantity', message: errMsg });
+      return { success: false, message: errMsg };
     }
 
-    if (qtySold > targetMed.quantity) {
+    // Validation 2: Reject quantities greater than available stock
+    const availableStock = targetMed.quantity;
+    if (qtyDispensed > availableStock) {
+      const errMsg = `Insufficient stock. Only ${availableStock} units are available.`;
       addToast({
         type: 'error',
         title: 'Insufficient Stock',
-        message: `Cannot sell ${qtySold} units. Only ${targetMed.quantity} units currently available.`
+        message: errMsg
       });
-      return { success: false, message: 'Insufficient stock' };
+      // Do NOT change stock
+      return { success: false, message: errMsg };
     }
 
-    const previousStock = targetMed.quantity;
-    const remainingStock = previousStock - qtySold;
+    // Exact Calculation: remainingStock = availableStock - quantityDispensed
+    const remainingStock = Math.max(0, availableStock - qtyDispensed);
     const unitPrice = targetMed.price;
-    const totalAmount = unitPrice * qtySold;
+    const totalAmount = unitPrice * qtyDispensed;
 
-    // Update Medicine Stock
-    const updatedMed = { ...targetMed, quantity: remainingStock };
+    // Worker who performed the transaction
+    const workerIdentifier = currentUser ? (currentUser.username || currentUser.name) : 'worker1';
+    const now = new Date();
+    const currentDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Update Medicine Stock immediately in state (and triggers persistent localStorage sync)
+    const updatedMed = {
+      ...targetMed,
+      quantity: remainingStock,
+      orderStatus: remainingStock === 0 ? 'Order Required' : targetMed.orderStatus
+    };
+
     setMedicines((prev) =>
       prev.map((med) => (med.id === medicineId ? updatedMed : med))
     );
 
-    // Append to Sales Log
+    // Record Dispensing Transaction with exact required properties
     const newSale = {
       id: `sale-${Date.now()}`,
       medicineId,
       medicineName: targetMed.name,
-      quantitySold: qtySold,
+      medicine: targetMed.name,
+      quantityGiven: qtyDispensed,
+      quantityDispensed: qtyDispensed,
+      quantitySold: qtyDispensed,
+      availableStock,
+      previousStock: availableStock,
+      remainingStock,
+      worker: workerIdentifier,
+      recordedBy: currentUser ? `${currentUser.name} (${currentUser.username})` : workerIdentifier,
+      date: currentDate,
+      time: currentTime,
+      timestamp: now.toISOString(),
+      transactionType: 'Dispense',
+      type: 'Dispense',
       unitPrice,
       totalAmount,
       customerType,
-      previousStock,
-      remainingStock,
-      timestamp: new Date().toISOString(),
-      recordedBy: currentUser ? `${currentUser.name} (${currentUser.username})` : 'Staff',
       notes
     };
 
     setSales((prev) => [newSale, ...prev]);
 
-    // Check stock status changes for alert messages
+    // Status: When stock reaches 0, status must become "Out of Stock"
     let statusNotice = '';
     if (remainingStock === 0) {
-      statusNotice = ' 🔴 Item is now OUT OF STOCK.';
+      statusNotice = ' 🔴 Item is now Out of Stock.';
     } else if (remainingStock <= targetMed.lowStockThreshold) {
-      statusNotice = ` 🟠 Item is now LOW STOCK (${remainingStock} units left).`;
+      statusNotice = ` 🟠 Item is now Low Stock (${remainingStock} units left).`;
     }
 
+    // Record in audit log / history
     logActivity(
-      'Sale Recorded',
+      'Dispense',
       targetMed.name,
-      `Sold ${qtySold} units (${settings.currencySymbol}${totalAmount.toFixed(2)}). Stock: ${previousStock} → ${remainingStock}.${statusNotice}`
+      `Dispensed ${qtyDispensed} units (Remaining: ${remainingStock} units). Worker: ${workerIdentifier}. Type: Dispense.${statusNotice}`,
+      workerIdentifier
     );
 
     addToast({
       type: 'success',
-      title: 'Sale Recorded Successfully',
-      message: `Stock updated: ${previousStock} → ${remainingStock} units.${statusNotice}`
+      title: remainingStock === 0 ? 'Dispensed — Out of Stock' : 'Dispensed Successfully',
+      message: `Dispensed ${qtyDispensed} units of ${targetMed.name}. Remaining stock: ${remainingStock} units.${statusNotice}`
     });
 
     return { success: true, sale: newSale, remainingStock };

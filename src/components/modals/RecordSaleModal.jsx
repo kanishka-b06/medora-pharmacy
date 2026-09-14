@@ -53,6 +53,10 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
     if (isInvalidQty || !currentMedicine) {
       if (qty > currentStock) {
         setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+      } else if (quantitySold === '' || isNaN(qty)) {
+        setValidationError('Please enter a valid numeric quantity.');
+      } else if (qty <= 0) {
+        setValidationError('Quantity to dispense must be at least 1.');
       } else {
         setValidationError('Please enter a valid quantity.');
       }
@@ -62,6 +66,7 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
     const result = recordSale({
       medicineId: currentMedicine.id,
       quantitySold: qty,
+      quantityToGive: qty,
       customerType,
       notes
     });
@@ -91,7 +96,7 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
             <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto mb-2 shadow-sm">
               <CheckCircle className="w-6 h-6" />
             </div>
-            <h4 className="text-base font-extrabold text-emerald-950">Sale Recorded Successfully</h4>
+            <h4 className="text-base font-extrabold text-emerald-950">Dispensed Successfully</h4>
             <p className="text-xs text-emerald-700 mt-0.5">
               Stock automatically updated from <strong>{completedSale.previousStock}</strong> → <strong>{completedSale.remainingStock}</strong> units.
             </p>
@@ -100,28 +105,34 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
           {/* Receipt Summary */}
           <div id="printable-receipt" className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
             <div className="flex justify-between font-bold text-slate-900 border-b border-slate-200 pb-2">
-              <span>{completedSale.medicineName}</span>
+              <span>Medicine: {completedSale.medicineName}</span>
               <span>{settings.currencySymbol}{completedSale.totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Quantity Issued:</span>
-              <span className="font-semibold text-slate-900">{completedSale.quantitySold} units</span>
+              <span>Quantity given:</span>
+              <span className="font-semibold text-slate-900">{completedSale.quantityGiven || completedSale.quantitySold} units</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Unit Price:</span>
-              <span>{settings.currencySymbol}{completedSale.unitPrice.toFixed(2)}</span>
+              <span>Remaining:</span>
+              <span className="font-semibold text-emerald-700">{completedSale.remainingStock} units</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Customer:</span>
-              <span>{completedSale.customerType}</span>
+              <span>Worker:</span>
+              <span className="font-medium text-slate-800">{completedSale.worker || completedSale.recordedBy}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Dispensed By:</span>
-              <span>{completedSale.recordedBy}</span>
+              <span>Date:</span>
+              <span className="text-slate-800">{completedSale.date || new Date(completedSale.timestamp).toLocaleDateString()}</span>
             </div>
-            <div className="flex justify-between text-slate-500 text-[11px] pt-1">
-              <span>Timestamp:</span>
-              <span>{new Date(completedSale.timestamp).toLocaleTimeString()}</span>
+            <div className="flex justify-between text-slate-600">
+              <span>Time:</span>
+              <span className="text-slate-800">{completedSale.time || new Date(completedSale.timestamp).toLocaleTimeString()}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Transaction Type:</span>
+              <span className="font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                {completedSale.transactionType || completedSale.type || 'Dispense'}
+              </span>
             </div>
           </div>
 
