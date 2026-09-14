@@ -47,7 +47,7 @@ export function RoleBasedLayout({ currentRoute, setCurrentRoute, children }) {
         setCurrentRoute={setCurrentRoute}
       />
 
-      <div className="flex flex-1 relative">
+      <div className="pt-16 flex flex-1 relative">
         {/* Role Sidebar below the Header */}
         <Sidebar
           currentRoute={currentRoute}

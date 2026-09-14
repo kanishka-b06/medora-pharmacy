@@ -24,7 +24,7 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full h-16 bg-white/95 backdrop-blur-md border-b border-teal-100/90 px-4 sm:px-6 shadow-[0_2px_12px_-2px_rgba(13,148,136,0.03)] flex items-center">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full h-16 bg-white/95 backdrop-blur-md border-b border-teal-100/90 px-4 sm:px-6 shadow-[0_2px_12px_-2px_rgba(13,148,136,0.03)] flex items-center">
         <div className="flex items-center justify-between gap-4 w-full">
           {/* Left: Mobile Menu Toggle & Brand */}
           <div className="flex items-center gap-3">
