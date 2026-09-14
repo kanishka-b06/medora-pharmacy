@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePharmacy } from '../../context/PharmacyContext';
 import { RackShelfBadge } from '../../components/common/RackShelfBadge';
 import { StockStatusBadge } from '../../components/common/Badge';
