@@ -97,7 +97,7 @@ export function WorkerSearch({ setCurrentRoute, onSelectMedicineForAI }) {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Search Header Banner */}
-      <div className="bg-gradient-to-r from-teal-850 via-teal-750 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-teal-950/10">
+      <div className="bg-gradient-to-r from-teal-800 via-teal-700 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-teal-950/10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-1.5 text-teal-300 text-xs font-bold uppercase tracking-wider">
