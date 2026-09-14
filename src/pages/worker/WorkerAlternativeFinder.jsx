@@ -317,14 +317,24 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                               Possible Database Match
                             </span>
                             <h4 className="text-lg font-extrabold text-slate-900">{candidate.name}</h4>
-                            <div className="flex flex-wrap gap-2 text-xs text-slate-600 font-medium mt-1">
-                              <span className="text-teal-800 font-bold">Same active ingredient ✓</span>
+                            <div className="flex flex-wrap gap-2 text-xs font-medium mt-1">
+                              {matchFactors.ingredient ? (
+                                <span className="text-teal-800 font-bold">✓ Same active ingredient ({candidate.activeIngredient})</span>
+                              ) : (
+                                <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                  ⚠ Different active ingredient ({candidate.activeIngredient})
+                                </span>
+                              )}
                               <span>•</span>
-                              <span className="text-teal-800 font-bold">{matchFactors.strength ? 'Same strength ✓' : 'Alternative strength'}</span>
+                              <span className={matchFactors.strength ? 'text-teal-800 font-bold' : 'text-slate-600'}>
+                                {matchFactors.strength ? '✓ Same strength' : `Alternative strength (${candidate.strength})`}
+                              </span>
                               <span>•</span>
-                              <span className="text-teal-800 font-bold">{matchFactors.dosageForm ? 'Same dosage form ✓' : 'Compatible form'}</span>
+                              <span className={matchFactors.dosageForm ? 'text-teal-800 font-bold' : 'text-slate-600'}>
+                                {matchFactors.dosageForm ? '✓ Same dosage form' : `Form: ${candidate.dosageForm}`}
+                              </span>
                               <span>•</span>
-                              <span className="text-emerald-700 font-bold">Currently available ✓</span>
+                              <span className="text-emerald-700 font-bold">✓ Currently available in inventory</span>
                             </div>
                           </div>
 
@@ -353,11 +363,24 @@ export function WorkerAlternativeFinder({ initialMedicineId = null }) {
                         </div>
                       </div>
 
+                      {/* Explicit Pharmacist Verification Callout when active ingredient differs */}
+                      {!matchFactors.ingredient && (
+                        <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <strong className="font-bold">Pharmacist Verification Required:</strong>
+                            <p className="mt-0.5 text-[11px] text-amber-800 leading-relaxed">
+                              This medicine has a different active ingredient ({candidate.activeIngredient}) from the requested item ({requestedMedicine.activeIngredient}). It is offered as a therapeutic class option only. Do NOT substitute automatically — a qualified pharmacist must review and confirm clinical suitability.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Why was this suggested? (Prompt #13 & #27) */}
                       <div className="p-4 rounded-2xl bg-teal-50/60 border border-teal-200/80 space-y-2">
                         <div className="flex items-center gap-2 text-xs font-extrabold text-teal-950">
                           <Info className="w-4 h-4 text-teal-700" />
-                          <span>Why was this suggested?</span>
+                          <span>Matching Factors & Inventory Rationale:</span>
                         </div>
 
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-teal-900">

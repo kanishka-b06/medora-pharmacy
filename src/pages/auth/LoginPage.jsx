@@ -43,7 +43,7 @@ export function LoginPage({ onLoginSuccess }) {
     return () => clearTimeout(t);
   }, []);
 
-  /* ─── Login handler — preserves all existing auth logic ─── */
+  /* ─── Login handler — preserves auth logic and validates selected portal role ─── */
   const handleLogin = (e) => {
     e.preventDefault();
     if (isLoading || isSuccess) return;
@@ -53,6 +53,25 @@ export function LoginPage({ onLoginSuccess }) {
     setTimeout(() => {
       const result = login(username, password);
       if (result.success) {
+        const userRole = result.user.role;
+        const isOwner = userRole === 'owner' || userRole === 'supervisor' || userRole === 'admin';
+        const isWorker = userRole === 'staff' || userRole === 'worker';
+
+        // Strict role validation: verify user credentials belong to selected portal
+        if (selectedRole === 'owner' && !isOwner) {
+          setIsLoading(false);
+          setIsSuccess(false);
+          setErrorMessage('Access Denied: Worker credentials cannot be used to log into Owner Portal. Please select Worker Portal.');
+          return;
+        }
+
+        if (selectedRole === 'worker' && !isWorker) {
+          setIsLoading(false);
+          setIsSuccess(false);
+          setErrorMessage('Access Denied: Owner credentials cannot be used to log into Worker Portal. Please select Owner Portal.');
+          return;
+        }
+
         setIsLoading(false);
         setIsSuccess(true);
         setTimeout(() => {

@@ -23,16 +23,37 @@ export function RecordSalePage({ setCurrentRoute }) {
 
   const currentMedicine = medicines.find((m) => m.id === selectedMedId);
   const currentStock = currentMedicine ? currentMedicine.quantity : 0;
-  const qty = parseInt(quantitySold, 10) || 0;
-  const remainingStock = Math.max(0, currentStock - qty);
+  const qty = parseInt(quantitySold, 10);
+  const remainingStock = Math.max(0, currentStock - (isNaN(qty) ? 0 : qty));
   const unitPrice = currentMedicine ? currentMedicine.price : 0;
-  const totalAmount = unitPrice * qty;
+  const totalAmount = unitPrice * (isNaN(qty) || qty <= 0 ? 0 : qty);
 
-  const isInvalidQty = qty <= 0 || qty > currentStock;
+  const [validationError, setValidationError] = useState('');
+
+  useEffect(() => {
+    if (quantitySold === '' || isNaN(qty)) {
+      setValidationError('Please enter a valid numeric quantity.');
+    } else if (qty <= 0) {
+      setValidationError('Quantity to dispense must be at least 1.');
+    } else if (qty > currentStock) {
+      setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+    } else {
+      setValidationError('');
+    }
+  }, [quantitySold, qty, currentStock]);
+
+  const isInvalidQty = isNaN(qty) || qty <= 0 || qty > currentStock;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isInvalidQty || !currentMedicine) return;
+    if (isInvalidQty || !currentMedicine) {
+      if (qty > currentStock) {
+        setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+      } else {
+        setValidationError('Please enter a valid quantity.');
+      }
+      return;
+    }
 
     const result = recordSale({
       medicineId: currentMedicine.id,
@@ -165,8 +186,9 @@ export function RecordSalePage({ setCurrentRoute }) {
                     min="1"
                     max={currentStock || 1}
                     value={quantitySold}
-                    onChange={(e) => setQuantitySold(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    onChange={(e) => setQuantitySold(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                     disabled={currentStock <= 0}
+                    placeholder="Qty"
                     className="w-28 px-4 py-2 text-base font-extrabold text-center rounded-xl border border-teal-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
 
@@ -185,6 +207,14 @@ export function RecordSalePage({ setCurrentRoute }) {
                   </div>
                 </div>
 
+                {/* Validation Error Message */}
+                {validationError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700 font-semibold animate-fade-in">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>{validationError}</span>
+                  </div>
+                )}
+
                 {/* Live Stock Calculation Box (Prompt #16) */}
                 <div className="p-3 rounded-xl bg-white border border-teal-200 text-xs">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
@@ -193,7 +223,7 @@ export function RecordSalePage({ setCurrentRoute }) {
                   <div className="flex items-center gap-2 font-semibold text-slate-700">
                     <span className="px-2 py-0.5 rounded bg-slate-100 font-bold">{currentStock}</span>
                     <span className="text-slate-400">−</span>
-                    <span className="px-2 py-0.5 rounded bg-amber-100 font-bold text-amber-900">{qty}</span>
+                    <span className="px-2 py-0.5 rounded bg-amber-100 font-bold text-amber-900">{isNaN(qty) ? 0 : qty}</span>
                     <span className="text-slate-400">=</span>
                     <span className={`px-2.5 py-0.5 rounded-lg font-black ${
                       remainingStock === 0 ? 'bg-rose-100 text-rose-900' :

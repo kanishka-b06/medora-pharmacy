@@ -26,16 +26,38 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
 
   const currentMedicine = medicines.find((m) => m.id === selectedMedId);
   const currentStock = currentMedicine ? currentMedicine.quantity : 0;
-  const qty = parseInt(quantitySold, 10) || 0;
-  const remainingStock = Math.max(0, currentStock - qty);
+  const qty = parseInt(quantitySold, 10);
+  const remainingStock = Math.max(0, currentStock - (isNaN(qty) ? 0 : qty));
   const unitPrice = currentMedicine ? currentMedicine.price : 0;
-  const totalAmount = unitPrice * qty;
+  const totalAmount = unitPrice * (isNaN(qty) || qty <= 0 ? 0 : qty);
 
-  const isInvalidQty = qty <= 0 || qty > currentStock;
+  const [validationError, setValidationError] = useState('');
+
+  // Validate quantity on change
+  useEffect(() => {
+    if (quantitySold === '' || isNaN(qty)) {
+      setValidationError('Please enter a valid numeric quantity.');
+    } else if (qty <= 0) {
+      setValidationError('Quantity to dispense must be at least 1.');
+    } else if (qty > currentStock) {
+      setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+    } else {
+      setValidationError('');
+    }
+  }, [quantitySold, qty, currentStock]);
+
+  const isInvalidQty = isNaN(qty) || qty <= 0 || qty > currentStock;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isInvalidQty || !currentMedicine) return;
+    if (isInvalidQty || !currentMedicine) {
+      if (qty > currentStock) {
+        setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+      } else {
+        setValidationError('Please enter a valid quantity.');
+      }
+      return;
+    }
 
     const result = recordSale({
       medicineId: currentMedicine.id,
@@ -176,8 +198,9 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
                 min="1"
                 max={currentStock || 1}
                 value={quantitySold}
-                onChange={(e) => setQuantitySold(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                onChange={(e) => setQuantitySold(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                 disabled={currentStock <= 0}
+                placeholder="Qty"
                 className="w-28 px-3.5 py-2 text-sm font-bold text-center rounded-xl border border-teal-300 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
 
@@ -197,6 +220,14 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
               </div>
             </div>
 
+            {/* Validation Error Message */}
+            {validationError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-2 text-xs text-rose-700 font-semibold animate-fade-in">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{validationError}</span>
+              </div>
+            )}
+
             {/* Live Stock Calculation Banner (Prompt #16) */}
             <div className="p-3 rounded-lg bg-white border border-teal-200 text-xs">
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
@@ -205,7 +236,7 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
               <div className="flex items-center gap-2 text-slate-700 font-medium">
                 <span className="px-2 py-0.5 rounded bg-slate-100 font-bold text-slate-900">{currentStock}</span>
                 <span className="text-slate-400">−</span>
-                <span className="px-2 py-0.5 rounded bg-amber-100 font-bold text-amber-900">{qty}</span>
+                <span className="px-2 py-0.5 rounded bg-amber-100 font-bold text-amber-900">{isNaN(qty) ? 0 : qty}</span>
                 <span className="text-slate-400">=</span>
                 <span className={`px-2 py-0.5 rounded font-extrabold ${
                   remainingStock === 0 ? 'bg-rose-100 text-rose-900' :
@@ -217,17 +248,11 @@ export function RecordSaleModal({ isOpen, onClose, preselectedMedicine = null })
               </div>
             </div>
 
-            {/* Warning if exceeds or out of stock */}
+            {/* Warning if out of stock */}
             {currentStock <= 0 && (
               <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
                 <AlertTriangle className="w-4 h-4" />
                 <span>Medicine is Out of Stock. Cannot record sale.</span>
-              </div>
-            )}
-            {qty > currentStock && currentStock > 0 && (
-              <div className="flex items-center gap-2 text-xs text-rose-700 font-semibold">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Cannot sell more than available {currentStock} units.</span>
               </div>
             )}
           </div>
