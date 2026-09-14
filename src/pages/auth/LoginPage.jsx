@@ -28,8 +28,8 @@ export function LoginPage({ onLoginSuccess }) {
 
   /* ─── Form state ─── */
   const [selectedRole, setSelectedRole] = useState('owner'); // 'owner' | 'worker'
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('supervisor');
+  const [password, setPassword] = useState('supervisor123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -74,6 +74,14 @@ export function LoginPage({ onLoginSuccess }) {
   const handleSelectRole = (roleType) => {
     setSelectedRole(roleType);
     setErrorMessage('');
+    // Prefill username and password for convenience if empty or previously prefilled
+    if (roleType === 'owner') {
+      setUsername('supervisor');
+      setPassword('supervisor123');
+    } else {
+      setUsername('staff');
+      setPassword('staff123');
+    }
   };
 
   /* ─── Input base classes ─── */
@@ -172,6 +180,45 @@ export function LoginPage({ onLoginSuccess }) {
                 <p className="text-xs text-teal-800 font-semibold">Credentials verified — entering portal…</p>
               </div>
             )}
+
+            {/* ── Portal selection buttons (Choose role first) ── */}
+            <div className="mb-6">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2.5">
+                Select Portal
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  id="quick-owner-portal"
+                  onClick={() => handleSelectRole('owner')}
+                  className={`flex items-center justify-center gap-2 py-3 px-3.5 rounded-2xl
+                    transition-all duration-200 cursor-pointer ${
+                      selectedRole === 'owner'
+                        ? 'bg-teal-50 border-2 border-teal-600 text-teal-900 shadow-sm shadow-teal-600/15 ring-2 ring-teal-500/20'
+                        : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800'
+                    }`}
+                  title="Select Owner Portal"
+                >
+                  <ShieldCheck className={`w-4 h-4 ${selectedRole === 'owner' ? 'text-teal-600' : 'text-slate-400'}`} />
+                  <span className="text-xs font-bold">Owner Portal</span>
+                </button>
+                <button
+                  type="button"
+                  id="quick-worker-portal"
+                  onClick={() => handleSelectRole('worker')}
+                  className={`flex items-center justify-center gap-2 py-3 px-3.5 rounded-2xl
+                    transition-all duration-200 cursor-pointer ${
+                      selectedRole === 'worker'
+                        ? 'bg-teal-50 border-2 border-teal-600 text-teal-900 shadow-sm shadow-teal-600/15 ring-2 ring-teal-500/20'
+                        : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800'
+                    }`}
+                  title="Select Worker Portal"
+                >
+                  <UserCheck className={`w-4 h-4 ${selectedRole === 'worker' ? 'text-teal-600' : 'text-slate-400'}`} />
+                  <span className="text-xs font-bold">Worker Portal</span>
+                </button>
+              </div>
+            </div>
 
             {/* ── Form ── */}
             <form onSubmit={handleLogin} className="space-y-4">
@@ -290,45 +337,6 @@ export function LoginPage({ onLoginSuccess }) {
                 )}
               </button>
             </form>
-
-            {/* ── Portal selection buttons ── */}
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2.5">
-                Select Portal
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  id="quick-owner-portal"
-                  onClick={() => handleSelectRole('owner')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                    transition-all duration-200 cursor-pointer ${
-                      selectedRole === 'owner'
-                        ? 'bg-teal-50 border-2 border-teal-600 text-teal-900 shadow-sm shadow-teal-600/10'
-                        : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800'
-                    }`}
-                  title="Select Owner Portal"
-                >
-                  <ShieldCheck className={`w-4 h-4 ${selectedRole === 'owner' ? 'text-teal-600' : 'text-slate-400'}`} />
-                  <span className="text-xs font-bold">Owner Portal</span>
-                </button>
-                <button
-                  type="button"
-                  id="quick-worker-portal"
-                  onClick={() => handleSelectRole('worker')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                    transition-all duration-200 cursor-pointer ${
-                      selectedRole === 'worker'
-                        ? 'bg-teal-50 border-2 border-teal-600 text-teal-900 shadow-sm shadow-teal-600/10'
-                        : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800'
-                    }`}
-                  title="Select Worker Portal"
-                >
-                  <UserCheck className={`w-4 h-4 ${selectedRole === 'worker' ? 'text-teal-600' : 'text-slate-400'}`} />
-                  <span className="text-xs font-bold">Worker Portal</span>
-                </button>
-              </div>
-            </div>
 
           </div>{/* /animate-form-in */}
         </div>{/* /form panel */}
