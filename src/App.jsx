@@ -28,7 +28,7 @@ export function App() {
   const [currentRoute, setCurrentRoute] = useState('admin-dashboard');
   const [selectedAIMedicineId, setSelectedAIMedicineId] = useState('med-001');
 
-  // Sync default route on login/logout
+  // Sync default route on login/logout and ensure window starts at top
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role === 'supervisor' || currentUser.role === 'admin' || currentUser.role === 'owner') {
@@ -39,11 +39,21 @@ export function App() {
     }
   }, [currentUser?.role, currentUser?.id]);
 
+  // Always reset scroll position to top = 0 whenever route changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  }, [currentRoute]);
+
   if (!currentUser) {
     return (
       <>
         <LoginPage
           onLoginSuccess={(user) => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+            if (document.documentElement) document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
             if (user.role === 'supervisor' || user.role === 'admin' || user.role === 'owner') {
               setCurrentRoute('admin-dashboard');
             } else {

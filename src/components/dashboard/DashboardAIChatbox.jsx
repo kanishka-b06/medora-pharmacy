@@ -18,7 +18,7 @@ export function DashboardAIChatbox({ setCurrentRoute }) {
   const { medicines, stats, orders, settings } = usePharmacy();
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const initialGreeting = {
     id: 'msg-init',
@@ -36,9 +36,13 @@ export function DashboardAIChatbox({ setCurrentRoute }) {
     { label: 'Expiry risk', query: 'Are any medicines expiring soon?' }
   ];
 
-  // Auto-scroll to bottom of chat
+  // Auto-scroll to bottom of chatbox container only (never scroll the outer window)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 1 || isTyping) {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }
   }, [messages, isTyping]);
 
   const generateAIResponse = (userQuery) => {
@@ -199,7 +203,7 @@ export function DashboardAIChatbox({ setCurrentRoute }) {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
+      <div ref={chatContainerRef} className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
         {messages.map((m) => {
           const isUser = m.sender === 'user';
           return (
@@ -264,8 +268,6 @@ export function DashboardAIChatbox({ setCurrentRoute }) {
             <span className="text-[10px] text-teal-700 font-medium">Checking inventory database...</span>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Quick Prompt Chips */}

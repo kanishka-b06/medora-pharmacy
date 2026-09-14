@@ -70,6 +70,9 @@ export function Sidebar({ currentRoute, setCurrentRoute, isMobileOpen, onCloseMo
   const navItems = isSupervisor ? supervisorNavItems : staffNavItems;
 
   const handleNavClick = (id) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
     setCurrentRoute(id);
     if (onCloseMobile) onCloseMobile();
   };

@@ -66,28 +66,20 @@ export function LoginPage({ onLoginSuccess }) {
     }, 400);
   };
 
-  /* ─── Quick-fill helpers & direct portal entry ─── */
-  const enterAsRole = (roleType) => {
-    const u = roleType === 'owner' ? 'supervisor' : 'staff';
-    const p = roleType === 'owner' ? 'supervisor123' : 'staff123';
-    setUsername(u);
-    setPassword(p);
-    setErrorMessage('');
-    setIsLoading(true);
+  const [selectedRole, setSelectedRole] = useState('owner'); // 'owner' | 'worker'
 
-    setTimeout(() => {
-      const result = login(u, p);
-      if (result.success) {
-        setIsLoading(false);
-        setIsSuccess(true);
-        setTimeout(() => {
-          if (onLoginSuccess) onLoginSuccess(result.user);
-        }, 600);
-      } else {
-        setIsLoading(false);
-        setErrorMessage(result.message || 'Login failed');
-      }
-    }, 250);
+  /* ─── Role selection helper (DOES NOT LOG IN, ONLY SELECTS PORTAL ROLE) ─── */
+  const handleSelectRole = (roleType) => {
+    setSelectedRole(roleType);
+    setErrorMessage('');
+    // Prefill username and password for convenience if empty or previously prefilled
+    if (roleType === 'owner') {
+      setUsername('supervisor');
+      setPassword('supervisor123');
+    } else {
+      setUsername('staff');
+      setPassword('staff123');
+    }
   };
 
   /* ─── Input base classes ─── */
@@ -305,33 +297,40 @@ export function LoginPage({ onLoginSuccess }) {
               </button>
             </form>
 
-            {/* ── Quick-fill buttons ── */}
+            {/* ── Portal selection buttons ── */}
             <div className="mt-6 pt-4 border-t border-slate-100">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2.5">
+                Select Portal
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   id="quick-owner-portal"
-                  onClick={() => enterAsRole('owner')}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                    bg-teal-50/90 hover:bg-teal-100 border border-teal-200/80 hover:border-teal-300
-                    text-teal-900 text-xs font-bold transition-all duration-200
-                    hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-                  title="Enter Owner / Admin Portal"
+                  onClick={() => handleSelectRole('owner')}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
+                    transition-all duration-200 cursor-pointer ${
+                      selectedRole === 'owner'
+                        ? 'bg-teal-50 border-2 border-teal-600 text-teal-900 shadow-sm shadow-teal-600/10'
+                        : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800'
+                    }`}
+                  title="Select Owner Portal"
                 >
-                  <ShieldCheck className="w-4 h-4 text-teal-600" />
+                  <ShieldCheck className={`w-4 h-4 ${selectedRole === 'owner' ? 'text-teal-600' : 'text-slate-400'}`} />
                   <span className="text-xs font-bold">Owner Portal</span>
                 </button>
                 <button
                   type="button"
                   id="quick-worker-portal"
-                  onClick={() => enterAsRole('worker')}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
-                    bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300
-                    text-slate-700 text-xs font-bold transition-all duration-200
-                    hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-                  title="Enter Worker Portal"
+                  onClick={() => handleSelectRole('worker')}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl
+                    transition-all duration-200 cursor-pointer ${
+                      selectedRole === 'worker'
+                        ? 'bg-teal-50 border-2 border-teal-600 text-teal-900 shadow-sm shadow-teal-600/10'
+                        : 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800'
+                    }`}
+                  title="Select Worker Portal"
                 >
-                  <UserCheck className="w-4 h-4 text-slate-600" />
+                  <UserCheck className={`w-4 h-4 ${selectedRole === 'worker' ? 'text-teal-600' : 'text-slate-400'}`} />
                   <span className="text-xs font-bold">Worker Portal</span>
                 </button>
               </div>

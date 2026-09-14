@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePharmacy } from '../../context/PharmacyContext';
 import { StatCard } from '../../components/common/StatCard';
 import { Badge, StockStatusBadge } from '../../components/common/Badge';
@@ -35,6 +35,13 @@ export function AdminDashboard({ setCurrentRoute }) {
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [activeAlertFilter, setActiveAlertFilter] = useState('all'); // all, oos, low, expiry
+
+  // Guarantee that Dashboard always opens from the very top (scroll position = 0)
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  }, []);
 
   // Filtered alerts
   const filteredAlerts = stats.criticalAlerts.filter((a) => {

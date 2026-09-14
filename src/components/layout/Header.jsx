@@ -37,7 +37,12 @@ export function Header({ onToggleMobileSidebar, currentRoute, setCurrentRoute })
             </button>
 
             <div 
-              onClick={() => setCurrentRoute(isSupervisor ? 'admin-dashboard' : 'worker-search')}
+              onClick={() => {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                if (document.documentElement) document.documentElement.scrollTop = 0;
+                if (document.body) document.body.scrollTop = 0;
+                setCurrentRoute(isSupervisor ? 'admin-dashboard' : 'worker-search');
+              }}
               className="flex items-center gap-2.5 cursor-pointer group"
             >
               <div className="w-9 h-9 rounded-full bg-[#11b3a1] flex items-center justify-center text-white shadow-md shadow-[#11b3a1]/25 group-hover:scale-105 transition-transform">
