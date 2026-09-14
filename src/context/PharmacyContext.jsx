@@ -207,7 +207,9 @@ export function PharmacyProvider({ children }) {
   };
 
   // Auth Operations
-  const login = (username, password) => {
+  // User Authentication
+  // Checks credentials and ensures the user role matches the selected portal BEFORE setting currentUser
+  const login = (username, password, selectedPortal = null) => {
     if (!username || !password) {
       return { success: false, message: 'Please provide both username and password.' };
     }
@@ -215,13 +217,14 @@ export function PharmacyProvider({ children }) {
     const trimmedUsername = username.trim().toLowerCase();
     const trimmedPassword = password.trim();
 
+    // 1. Find the user account
     let matchedUser = users.find(
       (u) =>
         u.username.toLowerCase() === trimmedUsername ||
         (u.email && u.email.toLowerCase() === trimmedUsername)
     );
 
-    // Default prototype fallback checks
+    // Default demo fallback checks
     if (!matchedUser) {
       if (
         trimmedUsername === 'supervisor' ||
@@ -267,11 +270,13 @@ export function PharmacyProvider({ children }) {
       return { success: false, message: 'This account has been deactivated. Please contact the administrator.' };
     }
 
+    // 2. Check user roles
     const isSupervisor =
       matchedUser.role === 'supervisor' || matchedUser.role === 'admin' || matchedUser.role === 'owner';
     const isWorker =
       matchedUser.role === 'staff' || matchedUser.role === 'worker';
 
+    // 3. Verify password
     const isValidPassword =
       trimmedPassword === 'admin123' ||
       trimmedPassword === 'supervisor123' ||
@@ -287,12 +292,31 @@ export function PharmacyProvider({ children }) {
       return { success: false, message: 'Incorrect password. Please try again.' };
     }
 
+    // 4. IMPORTANT: Check portal match BEFORE setting currentUser
+    // If Worker portal is selected and Owner credentials are entered -> reject login
+    if (selectedPortal === 'worker' && !isWorker) {
+      return {
+        success: false,
+        message: 'Access Denied: Owner credentials cannot be used to log into Worker Portal. Please select Owner Portal.'
+      };
+    }
+
+    // If Owner portal is selected and Worker credentials are entered -> reject login
+    if (selectedPortal === 'owner' && !isSupervisor) {
+      return {
+        success: false,
+        message: 'Access Denied: Worker credentials cannot be used to log into Owner Portal. Please select Worker Portal.'
+      };
+    }
+
+    // 5. Build normalized user object
     const normalizedUser = {
       ...matchedUser,
       role: isSupervisor ? 'owner' : 'staff',
       roleTitle: isSupervisor ? 'Pharmacy Owner' : 'Pharmacy Staff Dispenser'
     };
 
+    // 6. Set currentUser ONLY after role validation passes
     setCurrentUser(normalizedUser);
 
     setUsers((prev) =>

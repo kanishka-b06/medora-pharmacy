@@ -76,6 +76,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
     };
 
     // Factor 1: Active Ingredient Match (Max 50 points)
+    // Checks if both medicines have the same chemical/active drug
     if (reqIngredientNorm && candIngredientNorm) {
       if (reqIngredientNorm === candIngredientNorm) {
         score += 50;
@@ -92,6 +93,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
     }
 
     // Factor 2: Strength & Potency Match (Max 25 points)
+    // Checks if both medicines have the exact same dose (e.g. 500 mg)
     if (reqStrengthObj.value !== null && candStrengthObj.value !== null) {
       if (
         reqStrengthObj.value === candStrengthObj.value &&
@@ -114,6 +116,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
     }
 
     // Factor 3: Dosage Form Match (Max 15 points)
+    // Checks if form is identical (e.g. Tablet vs Tablet, or Capsule vs Capsule)
     if (reqDosageNorm && candDosageNorm) {
       if (reqDosageNorm === candDosageNorm) {
         score += 15;
@@ -129,6 +132,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
     }
 
     // Factor 4: Therapeutic Class & Indication (Max 30 points)
+    // Checks if medicines belong to the same medical treatment category
     if (reqClassNorm && candClassNorm) {
       if (reqClassNorm === candClassNorm) {
         score += 30;
@@ -144,7 +148,7 @@ export function findPossibleAlternatives(requestedMedicine, allMedicines, option
       }
     }
 
-    // Availability factor: Candidate is in current inventory with positive quantity
+    // Factor 5: Availability - Candidate must be physically in stock (quantity > 0)
     score += 5;
     reasons.push('Available in current inventory');
 

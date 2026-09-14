@@ -27,8 +27,9 @@ export function LoginPage({ onLoginSuccess }) {
   const { login } = usePharmacy();
 
   /* ─── Form state ─── */
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState('owner'); // 'owner' | 'worker'
+  const [username, setUsername] = useState('supervisor');
+  const [password, setPassword] = useState('supervisor123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -39,11 +40,11 @@ export function LoginPage({ onLoginSuccess }) {
   const [passFocused, setPassFocused] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setIsMounted(true), 60);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setIsMounted(true), 60);
+    return () => clearTimeout(timer);
   }, []);
 
-  /* ─── Login handler — preserves auth logic and validates selected portal role ─── */
+  /* ─── Login handler: verifies credentials against selected portal role ─── */
   const handleLogin = (e) => {
     e.preventDefault();
     if (isLoading || isSuccess) return;
@@ -51,41 +52,23 @@ export function LoginPage({ onLoginSuccess }) {
     setIsLoading(true);
 
     setTimeout(() => {
-      const result = login(username, password);
+      // Pass selectedRole so the role is checked BEFORE currentUser is set
+      const result = login(username, password, selectedRole);
+
       if (result.success) {
-        const userRole = result.user.role;
-        const isOwner = userRole === 'owner' || userRole === 'supervisor' || userRole === 'admin';
-        const isWorker = userRole === 'staff' || userRole === 'worker';
-
-        // Strict role validation: verify user credentials belong to selected portal
-        if (selectedRole === 'owner' && !isOwner) {
-          setIsLoading(false);
-          setIsSuccess(false);
-          setErrorMessage('Access Denied: Worker credentials cannot be used to log into Owner Portal. Please select Worker Portal.');
-          return;
-        }
-
-        if (selectedRole === 'worker' && !isWorker) {
-          setIsLoading(false);
-          setIsSuccess(false);
-          setErrorMessage('Access Denied: Owner credentials cannot be used to log into Worker Portal. Please select Owner Portal.');
-          return;
-        }
-
         setIsLoading(false);
         setIsSuccess(true);
         setTimeout(() => {
           if (onLoginSuccess) onLoginSuccess(result.user);
         }, 750);
       } else {
+        // Login failed: stay on login page, display error message
         setIsLoading(false);
         setIsSuccess(false);
         setErrorMessage(result.message || 'Invalid username or password.');
       }
     }, 400);
   };
-
-  const [selectedRole, setSelectedRole] = useState('owner'); // 'owner' | 'worker'
 
   /* ─── Role selection helper (DOES NOT LOG IN, ONLY SELECTS PORTAL ROLE) ─── */
   const handleSelectRole = (roleType) => {

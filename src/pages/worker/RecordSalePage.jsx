@@ -21,37 +21,49 @@ export function RecordSalePage({ setCurrentRoute }) {
   const [notes, setNotes] = useState('');
   const [completedSale, setCompletedSale] = useState(null);
 
-  const currentMedicine = medicines.find((m) => m.id === selectedMedId);
-  const currentStock = currentMedicine ? currentMedicine.quantity : 0;
-  const qty = parseInt(quantitySold, 10);
-  const remainingStock = Math.max(0, currentStock - (isNaN(qty) ? 0 : qty));
-  const unitPrice = currentMedicine ? currentMedicine.price : 0;
-  const totalAmount = unitPrice * (isNaN(qty) || qty <= 0 ? 0 : qty);
+  // Find the selected medicine from the inventory list
+  const selectedMedicine = medicines.find((medicine) => medicine.id === selectedMedId);
+  const currentMedicine = selectedMedicine; // Keep alias for existing JSX references
+  const availableStock = selectedMedicine ? selectedMedicine.quantity : 0;
+  const currentStock = availableStock; // Keep alias for existing JSX references
+
+  // Parse entered quantity
+  const quantityToDispense = parseInt(quantitySold, 10);
+  const qty = quantityToDispense; // Keep alias for existing JSX references
+
+  // Calculate remaining stock: remainingStock = availableStock - quantityToDispense
+  const remainingStock = Math.max(0, availableStock - (isNaN(quantityToDispense) ? 0 : quantityToDispense));
+  const unitPrice = selectedMedicine ? selectedMedicine.price : 0;
+  const totalAmount = unitPrice * (isNaN(quantityToDispense) || quantityToDispense <= 0 ? 0 : quantityToDispense);
 
   const [validationError, setValidationError] = useState('');
 
+  // 1. Live Validation: check entered quantity whenever the input changes
   useEffect(() => {
-    if (quantitySold === '' || isNaN(qty)) {
+    if (quantitySold === '' || isNaN(quantityToDispense)) {
       setValidationError('Please enter a valid numeric quantity.');
-    } else if (qty <= 0) {
+    } else if (quantityToDispense <= 0) {
       setValidationError('Quantity to dispense must be at least 1.');
-    } else if (qty > currentStock) {
-      setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
+    } else if (quantityToDispense > availableStock) {
+      setValidationError(`Insufficient stock. Only ${availableStock} units are available.`);
     } else {
       setValidationError('');
     }
-  }, [quantitySold, qty, currentStock]);
+  }, [quantitySold, quantityToDispense, availableStock]);
 
-  const isInvalidQty = isNaN(qty) || qty <= 0 || qty > currentStock;
+  const isInvalidQty = isNaN(quantityToDispense) || quantityToDispense <= 0 || quantityToDispense > availableStock;
 
+  // 2. Submit Dispense: validate stock and deduct quantity
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isInvalidQty || !currentMedicine) {
-      if (qty > currentStock) {
-        setValidationError(`Insufficient stock. Only ${currentStock} units are available.`);
-      } else if (quantitySold === '' || isNaN(qty)) {
+
+    // Reject if quantity is invalid or exceeds available stock
+    if (isInvalidQty || !selectedMedicine) {
+      if (quantityToDispense > availableStock) {
+        setValidationError(`Insufficient stock. Only ${availableStock} units are available.`);
+      } else if (quantitySold === '' || isNaN(quantityToDispense)) {
         setValidationError('Please enter a valid numeric quantity.');
-      } else if (qty <= 0) {
+      } else if (quantityToDispense <= 0) {
         setValidationError('Quantity to dispense must be at least 1.');
       } else {
         setValidationError('Please enter a valid quantity.');
@@ -59,10 +71,11 @@ export function RecordSalePage({ setCurrentRoute }) {
       return;
     }
 
+    // Record the dispensing operation
     const result = recordSale({
-      medicineId: currentMedicine.id,
-      quantitySold: qty,
-      quantityToGive: qty,
+      medicineId: selectedMedicine.id,
+      quantitySold: quantityToDispense,
+      quantityToGive: quantityToDispense,
       customerType,
       notes
     });

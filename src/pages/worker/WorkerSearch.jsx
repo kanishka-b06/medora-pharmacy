@@ -42,34 +42,38 @@ export function WorkerSearch({ setCurrentRoute, onSelectMedicineForAI }) {
   const [scannedBatchInput, setScannedBatchInput] = useState('');
 
   // Enhanced search filtering: searches name, brand, active ingredient, strength, power, usedFor, whoShouldUse, batch, rack, shelf
+  // Search filter: filters medicines by search text, stock status, rack, and dosage form
   const filteredMedicines = useMemo(() => {
-    return medicines.filter((med) => {
-      const term = searchTerm.toLowerCase().trim();
+    const searchText = searchTerm.toLowerCase().trim();
+
+    return medicines.filter((medicine) => {
+      // 1. Check if the medicine matches the search text
       const matchesSearch =
-        !term ||
-        (med.name || '').toLowerCase().includes(term) ||
-        (med.brandName || '').toLowerCase().includes(term) ||
-        (med.activeIngredient || '').toLowerCase().includes(term) ||
-        (med.strength || '').toLowerCase().includes(term) ||
-        (med.power || '').toLowerCase().includes(term) ||
-        (med.usedFor || '').toLowerCase().includes(term) ||
-        (med.whoShouldUse || '').toLowerCase().includes(term) ||
-        (med.batchNumber || '').toLowerCase().includes(term) ||
-        `rack ${med.rack}`.toLowerCase().includes(term) ||
-        `shelf ${med.shelf}`.toLowerCase().includes(term);
+        !searchText ||
+        (medicine.name || '').toLowerCase().includes(searchText) ||
+        (medicine.brandName || '').toLowerCase().includes(searchText) ||
+        (medicine.activeIngredient || '').toLowerCase().includes(searchText) ||
+        (medicine.strength || '').toLowerCase().includes(searchText) ||
+        (medicine.power || '').toLowerCase().includes(searchText) ||
+        (medicine.usedFor || '').toLowerCase().includes(searchText) ||
+        (medicine.whoShouldUse || '').toLowerCase().includes(searchText) ||
+        (medicine.batchNumber || '').toLowerCase().includes(searchText) ||
+        `rack ${medicine.rack}`.toLowerCase().includes(searchText) ||
+        `shelf ${medicine.shelf}`.toLowerCase().includes(searchText);
 
       if (!matchesSearch) return false;
 
-      // Status filter
-      if (selectedStatus === 'available' && med.quantity <= (med.lowStockThreshold || 10)) return false;
-      if (selectedStatus === 'low' && (med.quantity > (med.lowStockThreshold || 10) || med.quantity === 0)) return false;
-      if (selectedStatus === 'out' && med.quantity !== 0) return false;
+      // 2. Filter by stock status (available, low stock, or out of stock)
+      const lowStockLimit = medicine.lowStockThreshold || 10;
+      if (selectedStatus === 'available' && medicine.quantity <= lowStockLimit) return false;
+      if (selectedStatus === 'low' && (medicine.quantity > lowStockLimit || medicine.quantity === 0)) return false;
+      if (selectedStatus === 'out' && medicine.quantity !== 0) return false;
 
-      // Rack filter
-      if (selectedRack !== 'all' && med.rack !== selectedRack) return false;
+      // 3. Filter by storage rack
+      if (selectedRack !== 'all' && medicine.rack !== selectedRack) return false;
 
-      // Dosage filter
-      if (selectedDosage !== 'all' && med.dosageForm !== selectedDosage) return false;
+      // 4. Filter by dosage form (tablet, capsule, etc.)
+      if (selectedDosage !== 'all' && medicine.dosageForm !== selectedDosage) return false;
 
       return true;
     });
