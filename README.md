@@ -28,208 +28,106 @@ Automatically Deduct Stock
 Record Transaction
 ```
 
-When a requested medicine is unavailable, MEDORA searches the existing pharmacy inventory for possible alternatives using an explainable matching process. Human/pharmacist verification remains strictly required before substitution.
+When a requested medicine is unavailable, MEDORA searches the existing pharmacy inventory for possible alternatives using an explainable matching process comparing real inventory attributes. Human pharmacist verification remains strictly required before substitution.
 
 ---
 
 ## 🌟 Key Features
 
-### 1. Medicine Search & Instant Location Retrieval
-- **Multi-Attribute Search**: Search across commercial brand name, generic name, active ingredient, strength, power specification, therapeutic indication, and batch number.
-- **Physical Coordinates**: Instantly displays specific **Rack** and **Shelf** location identifiers (e.g., `Rack B → Shelf 3`) for rapid physical retrieval behind the pharmacy counter.
-- **Stock Visibility**: Clear badges reflecting current stock status and exact available unit counts.
+MEDORA includes the following fully implemented features:
 
-### 2. Exact Quantity Dispensing
-- **Worker-Controlled Input**: Staff enter the exact quantity requested by or prescribed to the customer.
-- **Strict Stock Validation**: Validates the input before processing:
-  - Prevents dispensing quantities greater than available stock.
-  - Rejects zero, negative numbers, empty inputs, and non-numeric characters.
-  - Generates clear validation messages (e.g., *"Insufficient stock. Only 10 units are available."*).
-- **Automatic Stock Calculation**: Applies the standard formula:
-  $$\text{Remaining Stock} = \text{Previous Stock} - \text{Quantity Dispensed}$$
-  Never allows stock counts to drop below zero.
-
-### 3. Automatic Stock Updates & Thresholds
-- **Status Classification**:
-  - 🟢 **Available**: Stock exceeds the low-stock threshold.
-  - 🟠 **Low Stock**: Stock is greater than zero but less than or equal to threshold (e.g., $\le 10$ units).
-  - 🔴 **Out of Stock**: Stock count reaches exactly $0$.
-- **State Synchronization**: Automatically triggers order alerts upon zero inventory and persists stock updates across the entire application.
-
-### 4. Comprehensive Transaction History
-- Every dispensing operation automatically logs an immutable transaction record with:
-  - **Medicine name**
-  - **Quantity dispensed** (quantity given)
-  - **Remaining stock**
-  - **Worker identifier** (staff member who performed the dispensation)
-  - **Date**
-  - **Time**
-  - **Transaction type** (`Dispense`)
-- Viewable in the Worker Shift Log and Admin Audit Trail, with receipt generation and CSV export capabilities.
-
-### 5. AI Alternative Medicine Finder
-- **Grounded in Real Inventory**: Searches strictly within the stored pharmacy inventory; never invents or hallucinates medicine names.
-- **Hierarchical Priority Matching**: Prioritizes candidates by:
-  1. Same active ingredient
-  2. Same strength
-  3. Same dosage form
-  4. Real-time in-stock availability (`quantity > 0`)
-- **Transparent Match Explanations**: Provides granular, factor-by-factor reasons for why each medicine is suggested.
-- **No Inventions Guarantee**: If no viable match exists in inventory, explicitly displays: *"No suitable alternative found in current inventory."*
-
-### 6. Human-in-the-Loop AI Governance
-- **No Automatic Substitution**: The AI functions strictly as a decision-support advisory tool. It does not auto-substitute prescriptions or medications.
-- **Mandatory Pharmacist Verification**: Human pharmacists must review, verify, and approve or reject any suggested alternative.
-- **Different Active Ingredient Safeguard**: If an alternative shares a therapeutic class but has a different active ingredient:
-  - It is **not** labelled as an automatic equivalent.
-  - Displays a prominent callout: *"Pharmacist verification required"*.
-  - Requires clinical review of therapeutic suitability by authorized personnel.
-
-### 7. Owner / Administrator Portal
-- **Inventory Management**: Complete catalog control to register, edit, or adjust medicine batches, thresholds, and clinical data.
-- **Stock Management & Analytics**: Overall store stock distribution, category breakdowns, and low-stock overview.
-- **Purchase Orders & Restocking**: Create replenishment orders, monitor supplier status (`Ordered` $\rightarrow$ `In Transit` $\rightarrow$ `Arrived`), and receive incoming stock into live inventory.
-- **Expiry Risk Monitoring**: Dashboard highlighting upcoming expiry dates and batches requiring clearance.
-- **Audit & Activity History**: Chronological system-wide logging of sales, dispensations, restock events, and AI suggestions.
-- **Worker & Role Oversight**: Overview of active staff accounts and assigned privileges.
-
-### 8. Worker / Dispenser Portal
-- **Counter Search Desk**: Fast medicine lookups with prominent rack/shelf coordinates.
-- **Medicine Information View**: Clinical power, intended use, target demographics, and usage directions for patient queries.
-- **Counter Sales & Dispensing**: Exact quantity issuing, live deduction calculations, and printable receipts.
-- **AI Alternative Finder**: Fast generic substitution assistance for out-of-stock items.
-- **Shift Activity**: Individual shift timeline showing all dispensations logged by the current worker.
-
-### 9. Expiry Risk Monitoring
-- Real-time date calculation categorizing batches into:
-  - 🟢 **SAFE**: More than 90 days remaining until expiry.
-  - 🟡 **EXPIRING SOON**: Between 30 and 90 days remaining.
-  - 🔴 **HIGH EXPIRY RISK**: 30 days or fewer remaining (or already expired).
-
-### 10. Supply Chain & Restock Workflow
-- Standardized replenishment pipeline:
-  - Out-of-stock or low-stock triggers order recommendations.
-  - Purchase orders generated with expected delivery dates and supplier details.
-  - One-action stock reception updates physical quantities and clears low-stock alerts.
+1. **Medicine Search**: Fast search across commercial brand name, generic name, active ingredient, strength, therapeutic indication, and batch number.
+2. **Medicine Details & Availability**: Live stock status badges (Available, Low Stock, Out of Stock) with comprehensive dosage, power, and manufacturer details.
+3. **Physical Rack & Shelf Location**: Instantly displays specific **Rack** and **Shelf** location identifiers (e.g., `Rack B → Shelf 2`) for rapid physical retrieval behind the pharmacy counter.
+4. **Batch & Expiry Information**: Tracks unique batch numbers and expiry dates for each inventory item.
+5. **Exact Quantity Dispensing**: Workers enter the exact quantity to give; validates against available inventory and prevents negative stock.
+6. **Automatic Stock Deduction**: Automatically calculates `remainingStock = availableStock - quantityDispensed` and immediately updates inventory across all views.
+7. **Comprehensive Transaction History**: Automatically logs immutable records (medicine name, quantity given, remaining stock, worker, date, time, and type) with receipt generation.
+8. **LocalStorage Persistence**: All stock adjustments, dispensing operations, restock records, and activities persist reliably in browser LocalStorage across page reloads.
+9. **AI Alternative Medicine Finder**: Searches strictly among medicines already present in MEDORA inventory based on attribute comparisons (active ingredient, strength, dosage form, and therapeutic class).
+10. **Pharmacist Verification**: Human-in-the-loop clinical governance. Suggested alternatives require human authorization, and items with differing active ingredients require explicit pharmacist verification.
+11. **Orders & Restock**: Create distributor purchase orders, track shipping status (`Ordered` → `In Transit` → `Arrived`), and receive incoming stock into live inventory.
+12. **Expiry Risk Monitor**: Calculates remaining days until expiry and categorizes batches into Safe, Expiring Soon, and High Expiry Risk.
+13. **Reports & Activity History**: Chronological system-wide audit logging of sales, dispensations, restock events, and AI suggestions with CSV export.
+14. **AI Copilot (Interactive Assistant)**: Embedded query assistant for quick stock lookups, expiry queries, and store operational guidance.
+15. **Role-Based Portals**: Dedicated portals for **Owner** (administrative oversight, inventory control, purchasing, analytics) and **Worker** (fast medicine search, shelf retrieval, counter dispensing).
 
 ---
 
-## 🔑 Demo Login Credentials
+## 🔑 Demo Login
 
-Authentication is role-based. The **Owner Portal** and **Worker Portal** buttons select the intended role, and authentication is completed through the **Login** action using the selected role and valid credentials.
+Authentication in MEDORA is role-based. To log in:
+1. **Select the appropriate portal** (Owner Portal or Worker Portal)
+2. **Enter the credentials**
+3. Click **Login**
 
-| Role | Username | Password | Purpose & Access Scope |
+| Portal Role | Username | Password | Purpose & Access Scope |
 | :--- | :--- | :--- | :--- |
-| **Owner** | `supervisor` | `supervisor123` | Full inventory control, purchasing, restock orders, store analytics, expiry tracking, audit history |
-| **Worker** | `staff` | `staff123` | Medicine lookup, rack/shelf navigation, exact quantity dispensing, AI alternative finder, shift history |
+| **Owner** | `supervisor` | `supervisor123` | Full inventory control, purchasing, restock orders, store analytics, expiry tracking, and audit history |
+| **Worker** | `staff` | `staff123` | Medicine lookup, physical rack/shelf location, exact quantity dispensing, AI alternative finder, and shift history |
 
-> **Note**: The portal buttons select the intended role. Authentication is performed through the Login action using the selected role and credentials.
+> **Note**: Selecting a portal role highlights that portal and loads the appropriate credentials. The user must click **Login** to authenticate and enter the dashboard. If the wrong portal is selected for a set of credentials, login is rejected and the user remains on the login page.
 
 ---
 
-## 💡 AI Alternative Example
+## 💡 AI Alternative Matching Engine
 
-The AI matching engine utilizes real inventory records to identify viable generic alternatives when a requested product is unavailable.
+The AI matching engine utilizes real inventory records to identify viable alternatives when a requested product is unavailable.
+
+### Attribute-Based Comparison
+The matching engine evaluates existing inventory records by comparing specific medicine attributes:
+- **Active ingredient**: Compares chemical/generic compound identity
+- **Strength**: Compares dosage concentration (e.g., 500 mg vs 650 mg)
+- **Dosage form**: Compares physical delivery form (Tablet, Capsule, Syrup, etc.)
+- **Therapeutic class**: Compares clinical indication category when active ingredients differ
+- **Inventory availability**: Filters strictly for items currently in stock (`quantity > 0`)
+
+> **Important**: AI similarity scores reflect **inventory attribute similarity** (active ingredient, strength, and form alignment). They are not medical confidence or clinical safety scores. All suggestions are drawn strictly from medicines already present in the local pharmacy inventory; the system never invents medicines, stock levels, or rack locations.
+
+### Human-in-the-Loop Clinical Rule
+- **No Automatic Substitution**: The AI does not automatically substitute medicines or alter prescriptions.
+- **Pharmacist Verification Required**: If an alternative shares a therapeutic purpose but contains a **different active ingredient**, MEDORA prominently displays:
+  > **"Pharmacist verification required"**
+- A qualified human pharmacist must review the clinical suitability and make the final decision before dispensing.
 
 ### Demonstration Scenario:
 - **Requested Medicine**: `Paracetamol 500 mg Tablet` (Status: 🔴 Out of Stock, 0 units)
 - **MEDORA Inventory Scan**: Evaluates available medicines in the local database.
 - **Identified Alternative**: `Calpol 500 mg Tablet`
-- **Matching Rationale**:
-  - **Active ingredient**: Paracetamol (Identical)
-  - **Strength**: 500 mg (Identical)
-  - **Dosage form**: Tablet (Identical)
-  - **Current availability**: 35 units in stock
-  - **Location**: Rack C → Shelf 2
+- **Matching Attributes**:
+  - Active ingredient: Paracetamol (Identical)
+  - Strength: 500 mg (Identical)
+  - Dosage form: Tablet (Identical)
+  - Current availability: 35 units in stock
+  - Location: Rack C → Shelf 2
 - **Matching Assessment**:
-  > *"Strong match based on matching active ingredient, strength, dosage form, and current inventory availability."*
-
-If the only available item has a different active ingredient (such as another therapeutic class analgesic):
-- MEDORA explicitly flags: **⚠ Different active ingredient**
-- Prominently displays: **Pharmacist verification required**
-- Leaves full clinical discretion with the attending pharmacist.
-
----
-
-## 🛡️ Responsible AI Principles
-
-MEDORA is built following healthcare-grade Responsible AI guidelines:
-
-1. **Inventory-Grounded Recommendations**: Recommendations are limited strictly to medicines cataloged in the pharmacy's real inventory with positive stock (`quantity > 0`).
-2. **Explainable Matching Factors**: Rather than providing an opaque prediction, every recommendation presents the precise factors (active ingredient, strength, dosage form, availability) behind the match.
-3. **Zero Hallucination / No Invented Medicines**: The system does not synthesize or invent non-existent drugs, brands, or suppliers.
-4. **No Automatic Medicine Substitution**: The AI cannot finalize or dispense an alternative independently. Human pharmacist authorization is technically enforced.
-5. **Additional Safeguards for Different Ingredients**: Medicines that do not share the identical active ingredient are never claimed as bio-equivalents.
-6. **No Unsupported Medical Claims**: The matching engine computes database field and pharmacological attribute similarities; it makes no unsupported medical efficacy guarantees.
-7. **Human-in-the-Loop Decision Making**: The qualified pharmacist retains ultimate oversight and legal responsibility for every dispensed item.
+  > *"Strong inventory match based on identical active ingredient, strength, dosage form, and current stock availability."*
+- **Dispensing Action**:
+  - Worker enters quantity: `5` units
+  - Calculation: `35 - 5 = 30 units remaining`
+  - Stock updates from **35 → 30 units** across the application, and a transaction receipt is generated.
 
 ---
 
-## 🗺️ Project Architecture
+## 🧪 Demonstration & Evaluation Walkthrough
 
-The codebase follows a modular React component structure with centralized state management:
-
-```
-src/
-├── components/
-│   ├── common/             # Reusable UI widgets: Badges, StatCards, RackShelfBadge, Toasts
-│   ├── layout/             # Header, Sidebar, RoleBasedLayout, Fixed navigation containers
-│   └── modals/             # Action dialogs: Add/Edit Medicine, Record Sale, Restock, Orders
-├── context/
-│   └── PharmacyContext.jsx # Central application state, dispensing logic, and LocalStorage sync
-├── data/
-│   └── initialData.js      # Baseline demonstration pharmacy dataset (15 medicines across Racks A-D)
-├── pages/
-│   ├── auth/
-│   │   └── LoginPage.jsx   # Role selection (Owner vs Worker) and credential authentication
-│   ├── admin/
-│   │   ├── AdminDashboard.jsx    # Store overview KPIs, low stock alerts, quick links
-│   │   ├── MedicineInventory.jsx # Complete medicine table with search, filter, and CRUD
-│   │   ├── StockManagement.jsx   # Rack/Shelf distribution and quantity correction
-│   │   ├── OrderManagement.jsx   # Supplier purchase orders and restock receiving
-│   │   ├── ExpiryTracking.jsx    # Batch expiry risk timeline and categorization
-│   │   └── ActivityHistory.jsx   # System-wide audit log with CSV export
-│   └── worker/
-│       ├── WorkerSearch.jsx            # Clinical search desk with shelf coordinates
-│       ├── MedicineInfoPage.jsx        # Patient guidance (power, used for, who should use)
-│       ├── RecordSalePage.jsx          # Fast counter dispensing form with live deduction
-│       ├── WorkerAlternativeFinder.jsx # AI alternative matching with pharmacist approval
-│       └── WorkerActivity.jsx          # Worker shift log and dispensing records
-├── services/
-│   └── aiMatchingEngine.js # Grounded similarity calculation, rule-based matching & explanations
-├── App.jsx                 # Client-side routing, route authentication guards & scroll reset
-├── main.jsx                # Application root mounting
-└── index.css               # Design system tokens, color variables & custom scrollbars
-```
-
-### Module Responsibilities:
-- **`PharmacyContext.jsx`**: Manages all shared state (`medicines`, `sales`, `orders`, `activities`, `currentUser`). Houses the core `recordSale` dispensing function, validation rules, stock deductions, and browser persistence routines.
-- **`aiMatchingEngine.js`**: Core algorithmic service implementing explainable matching, strength normalization, dosage form compatibility checks, and expiry risk calculations.
-- **`RecordSalePage.jsx` & `RecordSaleModal.jsx`**: User interfaces for entering quantities, rendering live calculation preview (`Available - Dispensing = Remaining`), and validating stock boundaries.
-- **`WorkerAlternativeFinder.jsx`**: Provides interactive search for unavailable medicines, displaying candidate comparisons, storage coordinates, match reasons, and human verification controls.
-
----
-
-## 🧪 Demonstration & Evaluation Workflows
-
-### Scenario 1: Medicine Retrieval, AI Alternative Discovery & Dispensing
-1. Navigate to the login page.
-2. Select **Worker Portal**.
-3. Enter username `staff` and password `staff123`, then click **Login**.
-4. In **Medicine Search**, search for `"Paracetamol 500 mg"` $\rightarrow$ Observe that it is marked as **OUT OF STOCK** (0 units available).
-5. Click **"Find Alternatives with AI"**.
-6. MEDORA searches the existing inventory and suggests **Calpol 500 mg** located at **Rack C → Shelf 2** (35 units available).
-7. Review the matching explanations:
+### Scenario 1: Medicine Search, AI Alternative Discovery & Dispensing
+1. On the login page, select **Worker Portal**.
+2. Enter username `staff` and password `staff123`, then click **Login**.
+3. In **Medicine Search**, search for `"Paracetamol 500 mg"` → Observe that it is marked as **OUT OF STOCK** (0 units available).
+4. Click **"Find Alternatives with AI"**.
+5. MEDORA searches the existing inventory and suggests **Calpol 500 mg** located at **Rack C → Shelf 2** (35 units available).
+6. Review the attribute comparison:
    - `✓ Same active ingredient (Paracetamol)`
    - `✓ Same strength (500 mg)`
    - `✓ Same dosage form (Tablet)`
    - `✓ Available in current inventory`
-8. Click **"Verify & Approve"** to complete human verification.
-9. Click **"Dispense Alternative Now"**.
-10. Enter exact quantity: `6`. Observe the live calculation preview: `35 - 6 = 29 units remaining`.
-11. Click **"Dispense / Complete Sale"**.
-12. Verify the generated invoice receipt with medicine, quantity given (6), remaining stock (29), worker (staff), date, time, and type (`Dispense`).
-13. Open **My Activity** $\rightarrow$ Verify the dispensing transaction is logged.
+7. Click **"Verify & Approve"** to complete human verification.
+8. Click **"Dispense Alternative Now"**.
+9. Enter exact quantity: `5`. Observe the calculation preview: `35 - 5 = 30 units remaining`.
+10. Click **"Dispense / Complete Sale"**.
+11. Observe the invoice receipt showing medicine name, quantity given (5), remaining stock (30), worker (staff), date, time, and transaction type (`Dispense`).
+12. Open **My Activity** to confirm the transaction is logged in the shift history.
 
 ### Scenario 2: Owner Restocking & Inventory Management
 1. Select **Owner Portal**.
@@ -238,37 +136,40 @@ src/
 4. Locate the pending order for the out-of-stock medicine.
 5. Click **"Receive & Restock"**.
 6. Confirm the incoming quantity (e.g., 100 units).
-7. Open **Medicine Inventory** or **Stock Management** $\rightarrow$ Verify that stock is immediately updated and the item transitions to 🟢 **Available**.
+7. Open **Medicine Inventory** or **Stock Management** → Verify that stock is updated and the item transitions to 🟢 **Available**.
 
 ---
 
 ## 🔬 Validation & Verification Test Cases
 
-The core dispensing and matching routines support the following test cases:
-
-| # | Test Scenario | Input & Conditions | System Response & Output | Validation Result |
-|---|---------------|--------------------|--------------------------|:-----------------:|
-| **1** | **Valid Dispensing** | Available = 100, Enter = 6 | Stock updates to 94; transaction logged (Given: 6, Remaining: 94) | **PASS** |
-| **2** | **Insufficient Stock** | Available = 10, Enter = 15 | Rejects transaction; displays *"Insufficient stock. Only 10 units are available."*; stock remains 10 | **PASS** |
-| **3** | **Exact Stock Quantity** | Available = 10, Enter = 10 | Dispenses 10; remaining stock = 0; status updates to 🔴 **Out of Stock** | **PASS** |
-| **4** | **Zero Quantity** | Available = 10, Enter = 0 | Rejects input; displays *"Quantity to dispense must be at least 1."*; no stock change | **PASS** |
-| **5** | **Negative Quantity** | Available = 10, Enter = -2 | Rejects input; displays validation error; stock remains untouched | **PASS** |
-| **6** | **Unavailable Medicine Scan** | Requested medicine has 0 units | Scans existing inventory; filters only candidates with `quantity > 0` | **PASS** |
-| **7** | **Strong AI Match** | Requested: Paracetamol 500mg Tablet | Calpol 500mg Tablet matched on ingredient, strength & form; displays *"Same active ingredient, strength, and dosage form."* | **PASS** |
-| **8** | **Different Active Ingredient** | Requested: Omeprazole 20mg | Pantoprazole identified as therapeutic class alternative; displays *"Pharmacist verification required"* | **PASS** |
-| **9** | **No Suitable Alternative** | Requested drug has no inventory equivalent | Returns 0 candidates; displays *"No suitable alternative found in current inventory."* | **PASS** |
-| **10** | **Persistence Across Refresh** | Dispense 100 $\rightarrow$ 94, Refresh browser | Stored inventory preserves 94 units; does not revert to 100 | **PASS** |
+| # | Test Scenario | Input & Conditions | System Response & Output | Result |
+|---|---|---|---|:---:|
+| **1** | **Owner Login** | Select Owner Portal, enter `supervisor` / `supervisor123` | Authenticates and opens Owner Dashboard | **PASS** |
+| **2** | **Worker Login** | Select Worker Portal, enter `staff` / `staff123` | Authenticates and opens Worker Dashboard | **PASS** |
+| **3** | **Wrong Role Login** | Select Worker Portal with Owner credentials (or vice versa) | Login rejected before user state changes; stays on login page | **PASS** |
+| **4** | **Wrong Password** | Enter incorrect password | Login rejected with error; stays on login page | **PASS** |
+| **5** | **Medicine Search** | Search by brand, generic name, or active ingredient | Displays matching medicines with rack/shelf coordinates | **PASS** |
+| **6** | **Exact Dispensing** | Available = 35, Enter = 5 | Stock updates from 35 → 30 units; receipt logged | **PASS** |
+| **7** | **Insufficient Stock** | Available = 10, Enter = 15 | Rejects transaction; displays *"Only 10 units are available."*; stock remains 10 | **PASS** |
+| **8** | **Zero / Negative Quantity** | Enter 0 or negative value | Rejects input; displays validation error; stock untouched | **PASS** |
+| **9** | **Stock Persistence** | Dispense 5 units (35 → 30), refresh page | Stock remains 30 units via LocalStorage | **PASS** |
+| **10**| **AI Alternative Scan** | Requested medicine has 0 units | Evaluates existing inventory items with `quantity > 0` | **PASS** |
+| **11**| **Strong Inventory Match**| Requested: Paracetamol 500mg | Calpol 500mg matched on ingredient, strength, and form | **PASS** |
+| **12**| **Different Active Ingredient** | Requested: Omeprazole 20mg | Displays prominent *"Pharmacist verification required"* warning | **PASS** |
+| **13**| **Logout** | Click Logout in header / navigation | Clears active session and returns to login page | **PASS** |
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Core Framework**: React 18
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS (Vanilla utilities with custom healthcare palette)
-- **Icons**: Lucide React
-- **State Management**: React Context API
-- **Data Persistence**: Browser LocalStorage synchronization
+MEDORA is built using the following technologies:
+
+- **React**: Component-based user interface architecture
+- **Vite**: Modern frontend tooling and fast development server
+- **Tailwind CSS**: Utility-first CSS styling with a healthcare-focused teal/slate palette
+- **Lucide React**: UI and action iconography
+- **Context API**: Centralized state management for inventory, sales, activities, and authentication
+- **LocalStorage**: Browser-based client-side data persistence across refreshes
 
 ---
 
@@ -278,7 +179,7 @@ The core dispensing and matching routines support the following test cases:
 - Node.js (version 18 or higher recommended)
 - npm (Node Package Manager)
 
-### Step-by-Step Instructions
+### Running Locally
 
 1. **Clone the repository**:
    ```bash
@@ -291,7 +192,7 @@ The core dispensing and matching routines support the following test cases:
    npm install
    ```
 
-3. **Start the local development server**:
+3. **Start development server**:
    ```bash
    npm run dev
    ```
@@ -302,13 +203,13 @@ The core dispensing and matching routines support the following test cases:
    npm run build
    ```
 
-5. **Preview production bundle locally**:
+5. **Preview production bundle**:
    ```bash
    npm run preview
    ```
 
 ---
 
-## 📄 License & Academic Note
+## 📄 Academic Project Summary
 
-This project is developed as an AI and software engineering academic evaluation prototype demonstrating grounded AI assistance, explainable rule-based clinical matching, and inventory integrity for retail pharmacy operations.
+MEDORA is designed as a college engineering demonstration project showing how explainable, inventory-grounded AI decision support combined with disciplined stock accounting and physical location tracking can streamline real-world pharmacy operations.
