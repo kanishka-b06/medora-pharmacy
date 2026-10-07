@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase.js';
 import {
   INITIAL_MEDICINES,
   INITIAL_USERS,
@@ -7,7 +7,7 @@ import {
   INITIAL_ACTIVITIES,
   INITIAL_AI_SUGGESTIONS,
   INITIAL_SETTINGS
-} from '../data/initialData';
+} from '../data/initialData.js';
 
 /**
  * Normalizes camelCase React objects to handle flexible column naming in Postgres
@@ -38,6 +38,33 @@ export function mapMedicineToDb(medicine) {
     order_status: medicine.orderStatus || 'None',
     supplier: medicine.supplier || null,
     is_demo: Boolean(medicine.isDemo)
+  };
+}
+
+export function mapMedicineToDbCamel(medicine) {
+  return {
+    id: medicine.id,
+    name: medicine.name,
+    brandName: medicine.brandName || null,
+    activeIngredient: medicine.activeIngredient || null,
+    strength: medicine.strength || null,
+    power: medicine.power || null,
+    dosageForm: medicine.dosageForm || 'Tablet',
+    therapeuticClass: medicine.therapeuticClass || null,
+    usedFor: medicine.usedFor || null,
+    whoShouldUse: medicine.whoShouldUse || null,
+    dosageInstructions: medicine.dosageInstructions || null,
+    rack: medicine.rack || 'A',
+    shelf: String(medicine.shelf || '1'),
+    quantity: Number(medicine.quantity) || 0,
+    batchNumber: medicine.batchNumber || null,
+    expiryDate: medicine.expiryDate || null,
+    price: Number(medicine.price) || 0,
+    lowStockThreshold: Number(medicine.lowStockThreshold) || 10,
+    expectedRestockDate: medicine.expectedRestockDate || null,
+    orderStatus: medicine.orderStatus || 'None',
+    supplier: medicine.supplier || null,
+    isDemo: Boolean(medicine.isDemo)
   };
 }
 
@@ -217,75 +244,232 @@ export function mapAISuggestionFromDb(dbRow) {
 }
 
 /**
- * Seeds initial demo data into Supabase if tables are currently empty.
- * Never overwrites existing records.
+ * Safely seeds initial demo data into Supabase if tables are currently empty or missing records.
+ * Uses ON CONFLICT (id) DO NOTHING so existing records are never overwritten and duplicates are prevented.
  */
 export async function seedInitialDataIfEmpty() {
-  if (!isSupabaseConfigured || !supabase) return;
+  if (!isSupabaseConfigured || !supabase) return { success: false, reason: 'unconfigured' };
 
   try {
-    // 1. Seed Medicines if none exist
+    // 1. Seed Medicines if missing
     const { data: existingMeds, error: medCheckError } = await supabase
       .from('medicines')
-      .select('id')
-      .limit(1);
+      .select('id');
 
-    if (!medCheckError && (!existingMeds || existingMeds.length === 0)) {
-      console.info('[MEDORA] Seeding initial medicines to Supabase...');
-      const dbRows = INITIAL_MEDICINES.map(mapMedicineToDb);
-      await supabase.from('medicines').insert(dbRows);
+    if (medCheckError) {
+      if (medCheckError.code === '42501') {
+        console.warn(
+          '[MEDORA Supabase Warning] Row Level Security (RLS) is blocking access to "medicines". Run supabase_schema_and_seed.sql in your Supabase SQL Editor to enable access.'
+        );
+      } else {
+        console.warn('[MEDORA] Supabase medicines check error:', medCheckError.message);
+      }
+    } else {
+      const existingIds = new Set((existingMeds || []).map((m) => m.id));
+      const missingMeds = INITIAL_MEDICINES.filter((m) => !existingIds.has(m.id));
+
+      if (missingMeds.length > 0) {
+        console.info(`[MEDORA] Seeding ${missingMeds.length} initial medicines to Supabase...`);
+        const snakeRows = missingMeds.map(mapMedicineToDb);
+        let insertRes = await supabase
+          .from('medicines')
+          .upsert(snakeRows, { onConflict: 'id', ignoreDuplicates: true });
+
+        // Fallback to camelCase if user defined table using camelCase
+        if (insertRes.error && insertRes.error.code === '42703') {
+          console.info('[MEDORA] Retrying medicine insertion with camelCase columns...');
+          const camelRows = missingMeds.map(mapMedicineToDbCamel);
+          insertRes = await supabase
+            .from('medicines')
+            .upsert(camelRows, { onConflict: 'id', ignoreDuplicates: true });
+        }
+
+        if (insertRes.error) {
+          console.warn('[MEDORA] Supabase medicine insert error:', insertRes.error.message);
+        } else {
+          console.info('[MEDORA] Medicines successfully seeded to Supabase.');
+        }
+      }
     }
 
-    // 2. Seed Users if none exist
+    // 2. Seed Users if missing
     const { data: existingUsers, error: userCheckError } = await supabase
       .from('users')
+      .select('id');
+
+    if (!userCheckError) {
+      const existingUserIds = new Set((existingUsers || []).map((u) => u.id));
+      const missingUsers = INITIAL_USERS.filter((u) => !existingUserIds.has(u.id));
+      if (missingUsers.length > 0) {
+        const userRows = missingUsers.map((u) => ({
+          id: u.id,
+          username: u.username,
+          name: u.name,
+          role: u.role,
+          email: u.email,
+          status: u.status,
+          last_active: u.lastActive,
+          avatar_color: u.avatarColor,
+          role_title: u.roleTitle
+        }));
+        await supabase.from('users').upsert(userRows, { onConflict: 'id', ignoreDuplicates: true });
+      }
+    }
+
+    // 3. Seed Orders if empty
+    const { data: existingOrders, error: orderCheckError } = await supabase
+      .from('orders')
       .select('id')
       .limit(1);
 
-    if (!userCheckError && (!existingUsers || existingUsers.length === 0)) {
-      console.info('[MEDORA] Seeding initial users to Supabase...');
-      const userRows = INITIAL_USERS.map((u) => ({
-        id: u.id,
-        username: u.username,
-        name: u.name,
-        role: u.role,
-        email: u.email,
-        status: u.status,
-        last_active: u.lastActive,
-        avatar_color: u.avatarColor,
-        role_title: u.roleTitle
-      }));
-      await supabase.from('users').insert(userRows);
-    }
-
-    // 3. Seed Orders if none exist
-    const { data: existingOrders } = await supabase.from('orders').select('id').limit(1);
-    if (!existingOrders || existingOrders.length === 0) {
+    if (!orderCheckError && (!existingOrders || existingOrders.length === 0)) {
       const orderRows = INITIAL_ORDERS.map(mapOrderToDb);
-      await supabase.from('orders').insert(orderRows);
+      await supabase.from('orders').upsert(orderRows, { onConflict: 'id', ignoreDuplicates: true });
     }
 
-    // 4. Seed Sales if none exist
-    const { data: existingSales } = await supabase.from('sales').select('id').limit(1);
-    if (!existingSales || existingSales.length === 0) {
+    // 4. Seed Sales if empty
+    const { data: existingSales, error: salesCheckError } = await supabase
+      .from('sales')
+      .select('id')
+      .limit(1);
+
+    if (!salesCheckError && (!existingSales || existingSales.length === 0)) {
       const saleRows = INITIAL_SALES.map(mapSaleToDb);
-      await supabase.from('sales').insert(saleRows);
+      await supabase.from('sales').upsert(saleRows, { onConflict: 'id', ignoreDuplicates: true });
     }
 
-    // 5. Seed Activities if none exist
-    const { data: existingActs } = await supabase.from('activities').select('id').limit(1);
-    if (!existingActs || existingActs.length === 0) {
+    // 5. Seed Activities if empty
+    const { data: existingActs, error: actCheckError } = await supabase
+      .from('activities')
+      .select('id')
+      .limit(1);
+
+    if (!actCheckError && (!existingActs || existingActs.length === 0)) {
       const actRows = INITIAL_ACTIVITIES.map(mapActivityToDb);
-      await supabase.from('activities').insert(actRows);
+      await supabase.from('activities').upsert(actRows, { onConflict: 'id', ignoreDuplicates: true });
     }
 
-    // 6. Seed AI Suggestions if none exist
-    const { data: existingSugs } = await supabase.from('ai_suggestions').select('id').limit(1);
-    if (!existingSugs || existingSugs.length === 0) {
+    // 6. Seed AI Suggestions if empty
+    const { data: existingSugs, error: sugCheckError } = await supabase
+      .from('ai_suggestions')
+      .select('id')
+      .limit(1);
+
+    if (!sugCheckError && (!existingSugs || existingSugs.length === 0)) {
       const sugRows = INITIAL_AI_SUGGESTIONS.map(mapAISuggestionToDb);
-      await supabase.from('ai_suggestions').insert(sugRows);
+      await supabase.from('ai_suggestions').upsert(sugRows, { onConflict: 'id', ignoreDuplicates: true });
     }
+
+    return { success: true };
   } catch (err) {
-    console.warn('[MEDORA] Non-critical error during initial data seeding check:', err);
+    console.warn('[MEDORA] Initial data seeding check notice:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Fetches all medicines directly from Supabase.
+ * Returns mapped medicine objects or null if query fails.
+ */
+export async function fetchMedicinesFromDb() {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('medicines')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.warn('[MEDORA] Supabase fetchMedicines error:', error.message);
+      return null;
+    }
+
+    if (!data || data.length === 0) return [];
+    return data.map(mapMedicineFromDb);
+  } catch (err) {
+    console.warn('[MEDORA] Supabase fetchMedicines exception:', err);
+    return null;
+  }
+}
+
+/**
+ * Updates a medicine's stock quantity and order status in Supabase.
+ */
+export async function updateMedicineStockInDb(medicineId, newQuantity, orderStatus = 'None') {
+  if (!isSupabaseConfigured || !supabase) return { success: false, offline: true };
+
+  try {
+    const qty = Number(newQuantity);
+    let res = await supabase
+      .from('medicines')
+      .update({
+        quantity: qty,
+        order_status: orderStatus
+      })
+      .eq('id', medicineId);
+
+    // Fallback if column names are camelCase
+    if (res.error && res.error.code === '42703') {
+      res = await supabase
+        .from('medicines')
+        .update({
+          quantity: qty,
+          orderStatus: orderStatus
+        })
+        .eq('id', medicineId);
+    }
+
+    if (res.error) {
+      console.warn('[MEDORA] Supabase stock update error:', res.error.message);
+      return { success: false, error: res.error };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.warn('[MEDORA] Supabase stock update exception:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Inserts a sales / dispensing transaction record into Supabase.
+ */
+export async function recordSaleInDb(sale) {
+  if (!isSupabaseConfigured || !supabase) return { success: false, offline: true };
+
+  try {
+    const payload = mapSaleToDb(sale);
+    let res = await supabase.from('sales').insert([payload]);
+
+    if (res.error && res.error.code === '42703') {
+      // CamelCase fallback
+      res = await supabase.from('sales').insert([
+        {
+          id: sale.id,
+          medicineId: sale.medicineId,
+          medicineName: sale.medicineName,
+          quantitySold: sale.quantitySold || sale.quantityGiven || 0,
+          unitPrice: sale.unitPrice,
+          totalAmount: sale.totalAmount,
+          customerType: sale.customerType,
+          previousStock: sale.previousStock,
+          remainingStock: sale.remainingStock,
+          recordedBy: sale.recordedBy || sale.worker,
+          notes: sale.notes,
+          timestamp: sale.timestamp
+        }
+      ]);
+    }
+
+    if (res.error) {
+      console.warn('[MEDORA] Supabase sale record error:', res.error.message);
+      return { success: false, error: res.error };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.warn('[MEDORA] Supabase sale record exception:', err);
+    return { success: false, error: err };
   }
 }

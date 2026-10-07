@@ -21,9 +21,27 @@ import {
   mapActivityFromDb,
   mapAISuggestionToDb,
   mapAISuggestionFromDb,
-  seedInitialDataIfEmpty
+  seedInitialDataIfEmpty,
+  fetchMedicinesFromDb,
+  updateMedicineStockInDb,
+  recordSaleInDb
 } from '../lib/supabaseService';
 
+/**
+ * ==============================================================================
+ * MEDORA Pharmacy Context & Central State Store
+ * ==============================================================================
+ * 
+ * Central business logic, reactive state provider, and persistence orchestrator for:
+ * - Role-Based Authentication & Session Handling (Owner / Worker)
+ * - Medicine Inventory CRUD & Real-Time Stock Level Tracking
+ * - Deterministic Dispensing Transaction Validation & Deductions
+ * - Physical Shelf/Rack Navigation Coordinates (Rack A-F, Shelf 1-5)
+ * - Purchase Order Generation & Restocking Life Cycle
+ * - Audit Trail Logging (Activities, Dispense records, AI Suggestions)
+ * - Dual Persistence Engine: Supabase PostgreSQL sync with LocalStorage offline fallback
+ * ==============================================================================
+ */
 const PharmacyContext = createContext(null);
 
 export function PharmacyProvider({ children }) {
@@ -164,15 +182,10 @@ export function PharmacyProvider({ children }) {
       // 1. Seed demo data safely if tables are empty
       await seedInitialDataIfEmpty();
 
-      // 2. Fetch medicines
-      const { data: medsData, error: medsError } = await supabase
-        .from('medicines')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (!medsError && medsData && medsData.length > 0) {
-        const mapped = medsData.map(mapMedicineFromDb);
-        setMedicines(mapped);
+      // 2. Fetch medicines directly from database (Supabase as single source of truth)
+      const medsFromDb = await fetchMedicinesFromDb();
+      if (medsFromDb && medsFromDb.length > 0) {
+        setMedicines(medsFromDb);
       }
 
       // 3. Fetch sales
@@ -647,14 +660,7 @@ export function PharmacyProvider({ children }) {
 
     // Update quantity in Supabase
     if (isSupabaseConfigured && supabase) {
-      supabase
-        .from('medicines')
-        .update({ quantity: targetQty })
-        .eq('id', id)
-        .then(({ error }) => {
-          if (error) console.warn('[MEDORA] Supabase stock correction error:', error);
-        })
-        .catch((err) => console.warn('[MEDORA] Supabase stock correction exception:', err));
+      updateMedicineStockInDb(id, targetQty, targetMed?.orderStatus || 'None');
     }
 
     logActivity('Stock Corrected', medName, `Stock adjusted from ${oldQty} → ${targetQty} units (${reason}).`);
@@ -750,26 +756,22 @@ export function PharmacyProvider({ children }) {
     // Persist Dispensing Transaction & Stock Deduction to Supabase
     if (isSupabaseConfigured && supabase) {
       // 1. Update medicine quantity in database
-      supabase
-        .from('medicines')
-        .update({
-          quantity: remainingStock,
-          order_status: remainingStock === 0 ? 'Order Required' : targetMed.orderStatus
-        })
-        .eq('id', medicineId)
-        .then(({ error }) => {
-          if (error) console.warn('[MEDORA] Supabase stock deduction error:', error);
-        })
-        .catch((err) => console.warn('[MEDORA] Supabase stock deduction exception:', err));
+      updateMedicineStockInDb(
+        medicineId,
+        remainingStock,
+        remainingStock === 0 ? 'Order Required' : targetMed.orderStatus
+      ).then((res) => {
+        if (!res.success && !res.offline) {
+          console.warn('[MEDORA] Supabase stock deduction warning:', res.error);
+        }
+      });
 
       // 2. Insert sale record in database
-      supabase
-        .from('sales')
-        .insert([mapSaleToDb(newSale)])
-        .then(({ error }) => {
-          if (error) console.warn('[MEDORA] Supabase insert sale error:', error);
-        })
-        .catch((err) => console.warn('[MEDORA] Supabase insert sale exception:', err));
+      recordSaleInDb(newSale).then((res) => {
+        if (!res.success && !res.offline) {
+          console.warn('[MEDORA] Supabase insert sale warning:', res.error);
+        }
+      });
     }
 
     // Status: When stock reaches 0, status must become "Out of Stock"

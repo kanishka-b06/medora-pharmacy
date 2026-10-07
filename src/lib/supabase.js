@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Resolve environment variables safely in both Vite and Node.js testing runtimes
+const env = (typeof import.meta !== 'undefined' && import.meta.env)
+  ? import.meta.env
+  : (typeof process !== 'undefined' && process.env ? process.env : {});
 
-// Check if credentials are provided in Vite environment variables
+const supabaseUrl = env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
+
+/**
+ * Checks whether valid Supabase credentials are configured.
+ */
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
@@ -12,7 +19,10 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('your-project')
 );
 
-// Create Supabase client instance (or a harmless mock if env vars are pending)
+/**
+ * Supabase client instance.
+ * Returns null if credentials are unconfigured, triggering graceful offline/local fallback.
+ */
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl.trim(), supabaseAnonKey.trim(), {
       auth: {
@@ -22,7 +32,7 @@ export const supabase = isSupabaseConfigured
     })
   : null;
 
-if (!isSupabaseConfigured && import.meta.env.DEV) {
+if (!isSupabaseConfigured && env.DEV) {
   console.info(
     '%c[MEDORA Database Status]%c Supabase credentials (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are not set in .env. Running on fallback local state until configured.',
     'color: #0d9488; font-weight: bold;',
